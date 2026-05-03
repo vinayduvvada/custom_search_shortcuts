@@ -8,13 +8,39 @@ A Chrome extension that adds customizable search shortcuts to your right-click c
 
 ## ✨ Features
 
+### Core
 - **Custom Search Engines**: Add unlimited custom search URLs to your context menu
 - **Environment Variables**: Define variables with different values for dev, test, and prod environments
 - **Dynamic URL Templates**: Use `{{variable}}` syntax to create flexible search URLs
 - **Right-Click Integration**: Seamlessly integrated into Chrome's context menu
-- **Import/Export**: Backup and share your search configurations
-- **Easy Management**: User-friendly options page for managing searches and environments
+- **Import/Export**: Backup and share your search configurations (includes all data: URLs, variables, environments, categories, trash, favorites, and settings)
 - **Manifest V3**: Built with the latest Chrome extension standards
+
+### Organization
+- **Search Categories**: Group shortcuts into categories (e.g., "Work", "Dev Tools", "Social") that appear as nested submenus in the context menu
+- **Emoji Category Icons**: Assign emoji icons to categories — displayed in the context menu, popup, and options page for visual distinction
+- **Drag & Drop Reordering**: Reorder URLs, categories, and environments by dragging
+- **Context Menu Separators**: Visual separators between uncategorized URLs, category submenus, and management options
+
+### Favorites
+- **Pin Favorites**: Star any shortcut to pin it as a favorite for instant access
+- **Popup Favorites Section**: Favorited shortcuts appear at the top of the popup under a dedicated ⭐ Favorites header
+- **Context Menu Pinning**: Favorites are pinned to the top of the right-click context menu, separated from the rest
+- **Category Preservation**: Favorited URLs still appear inside their category submenus in addition to being pinned at the top
+- **Toggle from Options**: Star/unstar shortcuts directly from the options page URL list
+
+### Productivity
+- **Duplicate Shortcuts**: Clone an existing shortcut — pre-fills the form with the URL data for review before saving
+- **Popup Quick Access**: Search and launch shortcuts directly from the popup with category group headers
+- **New Tab Positioning**: Open shortcut links right next to your current tab (configurable)
+
+### Safety
+- **Trash / Undo Delete**: Deleted shortcuts are moved to Trash with an "Undo" toast (Gmail-style). Trash retains items for a configurable number of days before permanent removal
+- **Restore from Trash**: One-click restore of deleted shortcuts, or permanently delete individual items or empty the entire trash
+
+### Appearance
+- **Dark Mode / Theme Toggle**: Light, Dark, and System theme modes. Synced across the options page and popup
+- **Settings Page**: Centralized configuration for theme, trash retention period, new tab position, and default category
 
 ## 🚀 Installation
 
@@ -129,28 +155,32 @@ custom-search-shortcuts/
 ├── manifest.json          # Extension configuration
 ├── background.js          # Service worker (context menu logic)
 ├── popup.html            # Extension popup UI
-├── popup.js              # Popup functionality
-├── options.html          # Options page UI
-├── options.js            # Options page logic
+├── popup.js              # Popup functionality + theme cycle
+├── options.html          # Options page UI (tabs: URLs, Variables, Categories, Environments, Trash, Settings)
+├── options.js            # Options page logic (CRUD, drag-reorder, settings, trash)
+├── theme.js              # Shared theme manager (light/dark/system)
 ├── icons/                # Extension icons
 │   ├── icon16.png
 │   ├── icon48.png
 │   └── icon128.png
 ├── LICENSE               # MIT License
-└── README.md            # This file
+└── README.md             # This file
 ```
 
 ### Key Files
 
 - **manifest.json**: Extension metadata and permissions
-- **background.js**: Handles context menu creation and click events
-- **options.js**: Manages URL, variable, and environment configuration
-- **popup.js**: Simple popup with link to options page
+- **background.js**: Handles context menu creation, category submenus, separators, environment submenus, and click events (respects tab position setting)
+- **options.js**: Manages URLs, variables, environments, categories, trash, and settings — includes drag-and-drop reordering, emoji picker, and undo-able delete
+- **popup.js**: Popup with category-grouped shortcut list, search filter, theme cycle button
+- **theme.js**: Shared theme engine — reads/writes `theme` setting, applies `data-theme` attribute, listens for `prefers-color-scheme` changes and cross-page sync
 
 ### Permissions
 
 - `contextMenus`: Create right-click menu items
-- `storage`: Save user configurations (synced across devices)
+- `storage`: Save user configurations (synced across devices via `chrome.storage.sync`)
+- `activeTab`: Access current tab info for "Add Current Page" and tab positioning
+- `tabs`: Query tab index for opening shortcuts next to the current tab
 
 ### Building & Testing
 
@@ -216,7 +246,8 @@ Prod:    https://yourdomain.com/
     {
       "id": "custom-search-1234567890",
       "name": "Google",
-      "url": "https://www.google.com/search?q=%s"
+      "url": "https://www.google.com/search?q=%s",
+      "category": "cat-1234567890"
     }
   ],
   "variables": [
@@ -236,7 +267,30 @@ Prod:    https://yourdomain.com/
         }
       ]
     }
-  ]
+  ],
+  "categories": [
+    {
+      "id": "cat-1234567890",
+      "name": "Dev Tools",
+      "icon": "🔧"
+    }
+  ],
+  "trash": [
+    {
+      "id": "custom-search-9876543210",
+      "name": "Old Search",
+      "url": "https://example.com/search?q=%s",
+      "deletedAt": 1714567890000
+    }
+  ],
+  "favorites": [
+    "custom-search-1234567890"
+  ],
+  "settings": {
+    "trashDays": 15,
+    "tabPosition": "next",
+    "defaultCategory": ""
+  }
 }
 ```
 
@@ -321,14 +375,44 @@ If you distribute this extension, you are responsible for ensuring compliance wi
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/custom-search-shortcuts/issues)
-- **Email**: your.email@example.com
+- **Issues**: [GitHub Issues](https://github.com/dvinay/custom-search-shortcuts/issues)
+- **Email**: vinay.chowdary518@gmail.com
 - **Documentation**: [Chrome Extension Docs](https://developer.chrome.com/docs/extensions/)
 
 
+## ⚙️ Settings
+
+The Settings tab (gear icon, rightmost tab) provides centralized configuration:
+
+| Setting | Description | Default |
+|---|---|---|
+| **Theme** | Light / System / Dark | System |
+| **Trash Retention** | Days to keep deleted items (1–90) | 15 days |
+| **New Tab Position** | Next to current tab / End of tab bar | Next to current |
+| **Default Category** | Auto-select category when adding new URLs | None |
+
 ## 📊 Version History
 
-### v1.0.0 (Upcoming)
+### v3.0.0
+- **Favorites**: Pin shortcuts to the top of the context menu and popup for quick access
+- Favorite star toggle in both popup and options page
+- Favorited URLs appear at the top of the context menu with a separator
+- Favorited URLs with categories still appear inside their category submenus
+- Export/Import now includes favorites and settings
+
+### v2.0.0
+- Search Categories with emoji icon picker
+- Nested category submenus in context menu with separators
+- Duplicate shortcut (pre-fills form for review)
+- Trash system with configurable retention and undo-able delete
+- Dark mode / Light mode / System theme toggle
+- Settings page (theme, trash retention, tab position, default category)
+- New tabs open next to current tab (configurable)
+- Popup grouped by category with emoji headers
+- Drag-and-drop reordering for URLs, categories, and environments
+- Export/Import includes categories, trash, and settings
+
+### v1.0.0
 - Initial public release
 - Custom search URLs
 - Environment variables support
