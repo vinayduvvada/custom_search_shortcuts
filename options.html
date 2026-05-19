@@ -857,6 +857,83 @@
       box-shadow: inset 0 -2px 0 0 var(--primary);
     }
 
+    /* --- Context Menu Order --- */
+    .context-menu-order-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 12px;
+    }
+
+    .context-menu-order-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .context-menu-order-item:hover {
+      border-color: var(--primary);
+    }
+
+    .context-menu-order-item.dragging {
+      opacity: 0.4;
+      background: var(--primary-light);
+    }
+
+    .context-menu-order-item.drag-over-top {
+      box-shadow: inset 0 2px 0 0 var(--primary);
+    }
+
+    .context-menu-order-item.drag-over-bottom {
+      box-shadow: inset 0 -2px 0 0 var(--primary);
+    }
+
+    .context-menu-order-item .order-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      width: 24px;
+      text-align: center;
+    }
+
+    .context-menu-order-item .order-label {
+      flex: 1;
+    }
+
+    .context-menu-order-item .order-handle {
+      cursor: grab;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .context-menu-order-item .order-handle:active {
+      cursor: grabbing;
+    }
+
+    .context-menu-order-item .order-number {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--border);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
     /* --- Utility --- */
     .hidden { display: none !important; }
     input[type="file"] { display: none; }
@@ -977,10 +1054,55 @@
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       max-width: 480px;
       width: 90%;
+      height: 400px;
       padding: 32px;
       position: relative;
       animation: tutorialSlideUp 0.3s ease;
+      display: flex;
+      flex-direction: column;
     }
+
+    .tutorial-card #tutorial-body {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .tutorial-preset-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .tutorial-preset-actions .btn {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+
+    .tutorial-preset-actions .btn-add-all {
+      background: var(--primary);
+      color: white;
+    }
+
+    .tutorial-preset-actions .btn-add-all:hover { background: var(--primary-hover); }
+    .tutorial-preset-actions .btn-add-all:disabled { opacity: 0.6; cursor: default; }
+
+    .tutorial-preset-actions .btn-skip-presets {
+      background: var(--surface-alt);
+      color: var(--text-secondary);
+    }
+
+    .tutorial-preset-actions .btn-skip-presets:hover { background: var(--border); color: var(--text); }
 
     @keyframes tutorialSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
@@ -1122,376 +1244,800 @@
       flex-shrink: 0;
       margin-top: 6px;
     }
+
+    /* --- Preset Library --- */
+    .preset-category-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .preset-filter-pill {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .preset-filter-pill:hover {
+      border-color: var(--primary);
+      color: var(--text);
+    }
+
+    .preset-filter-pill.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .preset-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      transition: all 0.15s;
+    }
+
+    .preset-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
+    }
+
+    .preset-card.preset-added {
+      border-color: var(--success);
+      background: var(--success-bg);
+    }
+
+    .preset-card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      background: var(--surface-alt);
+    }
+
+    .preset-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .preset-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preset-card-url {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .preset-card-actions {
+      flex-shrink: 0;
+    }
+
+    .preset-add-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--primary);
+      border-radius: var(--radius);
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .preset-add-btn:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    .preset-add-btn svg { width: 13px; height: 13px; }
+
+    .preset-remove-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--danger);
+      border-radius: var(--radius);
+      background: var(--danger-bg, rgba(239, 68, 68, 0.08));
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .preset-remove-btn:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    .preset-remove-btn svg { width: 13px; height: 13px; }
+
+    .preset-section-header {
+      grid-column: 1 / -1;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 8px 0 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .preset-section-header:first-child { padding-top: 0; }
+
+    /* --- Bulk Actions --- */
+    .bulk-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--primary-light);
+      border-bottom: 1px solid var(--border-light);
+      animation: bulkBarSlide 0.2s ease;
+    }
+
+    @keyframes bulkBarSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .bulk-bar.active { display: flex; }
+
+    .bulk-bar-info {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-right: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bulk-bar-info span { font-weight: 400; color: var(--text-secondary); font-size: 12px; }
+
+    .bulk-bar-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .bulk-btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .bulk-btn:hover { background: var(--surface-alt); color: var(--text); border-color: var(--text-muted); }
+    .bulk-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .bulk-btn-danger { color: var(--danger); }
+    .bulk-btn-danger:hover { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+
+    .bulk-btn-cancel {
+      background: none;
+      border-color: transparent;
+      color: var(--text-muted);
+    }
+    .bulk-btn-cancel:hover { color: var(--text); background: none; border-color: transparent; }
+
+    .bulk-move-select {
+      padding: 5px 28px 5px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+    }
+    .bulk-move-select:focus { border-color: var(--primary); }
+
+    .bulk-select-toggle {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .bulk-select-toggle:hover { border-color: var(--primary); color: var(--text); }
+    .bulk-select-toggle.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .bulk-select-toggle svg { width: 14px; height: 14px; }
+
+    /* Checkbox in list items */
+    .bulk-checkbox {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s;
+      position: relative;
+      background: var(--surface);
+    }
+
+    .bulk-mode .bulk-checkbox { display: flex; align-items: center; justify-content: center; }
+    .bulk-mode .drag-handle { display: none !important; }
+
+    .bulk-checkbox:hover { border-color: var(--primary); }
+
+    .bulk-checkbox.checked {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .bulk-checkbox.checked::after {
+      content: '';
+      display: block;
+      width: 5px;
+      height: 9px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      margin-bottom: 2px;
+    }
+
+    .bulk-mode .list-item { cursor: pointer; }
+    .bulk-mode .list-item.bulk-selected { background: var(--primary-light); }
+    .bulk-mode .list-item-actions { display: none !important; }
+
+    .select-all-checkbox {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--primary);
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .select-all-checkbox:hover { background: var(--primary-light); }
+
+    .select-all-checkbox.checked {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .select-all-checkbox.checked::after {
+      content: '';
+      display: block;
+      width: 4px;
+      height: 8px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      margin-bottom: 2px;
+    }
+
+    .select-all-checkbox.partial {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .select-all-checkbox.partial::after {
+      content: '';
+      display: block;
+      width: 8px;
+      height: 2px;
+      background: white;
+      border: none;
+      transform: none;
+      margin: 0;
+    }
   </style>
 </head>
 <body>
-  <!-- Top Bar -->
-  <div class="top-bar">
-    <div class="top-bar-inner">
-      <h1>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        Custom Search Shortcuts
-      </h1>
-      <div class="top-bar-actions">
-        <button id="help-btn" class="btn" title="Show tutorial">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          Help
-        </button>
-        <button id="import-btn" class="btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Import
-        </button>
-        <button id="export-btn" class="btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Export
-        </button>
-        <input type="file" id="import-file" accept=".json">
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <h1>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      Custom Search Shortcuts
+    </h1>
+    <div class="top-bar-actions">
+      <button id="help-btn" class="btn" title="Show tutorial">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Help
+      </button>
+      <button id="import-btn" class="btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Import
+      </button>
+      <button id="export-btn" class="btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Export
+      </button>
+      <input type="file" id="import-file" accept=".json">
+    </div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <div class="tab-bar-inner">
+    <button class="tab-btn active" data-tab="urls">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Search URLs
+      <span class="badge" id="url-count">0</span>
+    </button>
+    <button class="tab-btn" data-tab="presets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+      Presets
+      <span class="badge" id="preset-count">0</span>
+    </button>
+    <button class="tab-btn" data-tab="variables">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      Variables
+      <span class="badge" id="variable-count">0</span>
+    </button>
+    <button class="tab-btn" data-tab="categories">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      Categories
+      <span class="badge" id="category-count">0</span>
+    </button>
+    <button class="tab-btn" data-tab="environments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+      Environments
+      <span class="badge" id="env-count">0</span>
+    </button>
+    <button class="tab-btn" data-tab="trash">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+      Trash
+      <span class="badge" id="trash-count">0</span>
+    </button>
+    <button class="tab-btn" data-tab="settings" style="margin-left:auto">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      Settings
+    </button>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+
+  <!-- URLs Tab -->
+  <div class="tab-panel active" id="tab-urls">
+    <div class="card">
+      <div class="card-header">
+        <h2>Add Search URL</h2>
       </div>
-    </div>
-  </div>
-
-  <!-- Tab Bar -->
-  <div class="tab-bar">
-    <div class="tab-bar-inner">
-      <button class="tab-btn active" data-tab="urls">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        Search URLs
-        <span class="badge" id="url-count">0</span>
-      </button>
-      <button class="tab-btn" data-tab="variables">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-        Variables
-        <span class="badge" id="variable-count">0</span>
-      </button>
-      <button class="tab-btn" data-tab="categories">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-        Categories
-        <span class="badge" id="category-count">0</span>
-      </button>
-      <button class="tab-btn" data-tab="environments">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-        Environments
-        <span class="badge" id="env-count">0</span>
-      </button>
-      <button class="tab-btn" data-tab="trash">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        Trash
-        <span class="badge" id="trash-count">0</span>
-      </button>
-      <button class="tab-btn" data-tab="settings" style="margin-left:auto">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-        Settings
-      </button>
-    </div>
-  </div>
-
-  <!-- Main Content -->
-  <div class="main-content">
-
-    <!-- URLs Tab -->
-    <div class="tab-panel active" id="tab-urls">
-      <div class="card">
-        <div class="card-header">
-          <h2>Add Search URL</h2>
+      <div class="card-body">
+        <div class="info-tip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>Use <code>%s</code> as the search text placeholder. Use <code>{{VAR_NAME}}</code> for environment variables.<br>Example: <code>https://google.com/search?q=%s&lang={{LANG}}</code></span>
         </div>
-        <div class="card-body">
-          <div class="info-tip">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            <span>Use <code>%s</code> as the search text placeholder. Use <code>{{VAR_NAME}}</code> for environment variables.<br>Example: <code>https://google.com/search?q=%s&lang={{LANG}}</code></span>
+        <form id="add-url-form" class="form-row">
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" placeholder="e.g., Google Search">
           </div>
-          <form id="add-url-form" class="form-row">
-            <div class="form-group">
-              <label for="name">Name</label>
-              <input type="text" id="name" placeholder="e.g., Google Search">
-            </div>
-            <div class="form-group" style="flex:2;position:relative">
-              <label for="url">URL Template</label>
-              <input type="text" id="url" placeholder="e.g., https://google.com/search?q=%s" autocomplete="off">
-              <div id="var-suggestions" class="var-suggestions hidden"></div>
-            </div>
-            <div class="form-group" style="flex:0 0 140px">
-              <label for="url-category">Category</label>
-              <select id="url-category">
-                <option value="">None</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary" style="align-self:flex-end">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Add
-            </button>
-            <button type="button" id="update-btn" class="btn btn-update hidden" style="align-self:flex-end">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-              Update
-            </button>
-          </form>
-        </div>
+          <div class="form-group" style="flex:2;position:relative">
+            <label for="url">URL Template</label>
+            <input type="text" id="url" placeholder="e.g., https://google.com/search?q=%s" autocomplete="off">
+            <div id="var-suggestions" class="var-suggestions hidden"></div>
+          </div>
+          <div class="form-group" style="flex:0 0 140px">
+            <label for="url-category">Category</label>
+            <select id="url-category">
+              <option value="">None</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="align-self:flex-end">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Add
+          </button>
+          <button type="button" id="update-btn" class="btn btn-update hidden" style="align-self:flex-end">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            Update
+          </button>
+        </form>
       </div>
+    </div>
 
-      <div class="card" style="margin-top:16px">
-        <div class="card-header">
-          <h2>Saved URLs</h2>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <h2>Saved URLs</h2>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button id="bulk-select-toggle" class="bulk-select-toggle" title="Select multiple URLs">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Select
+          </button>
           <div class="search-filter">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="text" id="url-search" placeholder="Filter URLs...">
           </div>
         </div>
-        <div id="url-list"></div>
-        <div id="url-no-results" class="empty-list hidden">
-          <p>No URLs match your filter.</p>
-        </div>
-        <div id="url-empty" class="empty-list hidden">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          <p>No search URLs added yet. Add one above to get started.</p>
-        </div>
       </div>
-    </div>
-
-    <!-- Variables Tab -->
-    <div class="tab-panel" id="tab-variables">
-      <div class="card">
-        <div class="card-header">
-          <h2>Add Variable</h2>
+      <div id="bulk-bar" class="bulk-bar">
+        <div class="bulk-bar-info">
+          <div id="bulk-select-all" class="select-all-checkbox" title="Select all"></div>
+          <span id="bulk-count">0 selected</span>
         </div>
-        <div class="card-body">
-          <div class="info-tip">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            <span>Variables let you parameterize your URLs. Reference them in URLs as <code>{{VAR_NAME}}</code>. Each environment can override the default value.</span>
-          </div>
-          <form id="add-variable-form" class="form-row">
-            <div class="form-group">
-              <label for="variable-name">Variable Name</label>
-              <input type="text" id="variable-name" placeholder="e.g., INSTANCE" required>
-            </div>
-            <div class="form-group">
-              <label for="variable-default-value">Default Value</label>
-              <input type="text" id="variable-default-value" placeholder="e.g., prod001" required>
-            </div>
-            <button type="submit" class="btn btn-primary" style="align-self:flex-end">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Add
-            </button>
-            <button type="button" id="update-variable-btn" class="btn btn-update hidden" style="align-self:flex-end">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-              Update
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <div class="card-header">
-          <h2>Saved Variables</h2>
-        </div>
-        <div id="variable-list"></div>
-        <div id="variable-empty" class="empty-list hidden">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          <p>No variables defined yet. Add one to make your URLs dynamic.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Categories Tab -->
-    <div class="tab-panel" id="tab-categories">
-      <div class="card">
-        <div class="card-header">
-          <h2>Add Category</h2>
-        </div>
-        <div class="card-body">
-          <div class="info-tip">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            <span>Categories let you group your search shortcuts into folders (e.g., "Work", "Dev Tools", "Social"). Categorized URLs appear as nested submenus in the right-click context menu.</span>
-          </div>
-          <form id="add-category-form" class="form-row">
-            <div class="form-group" style="flex:0 0 auto">
-              <label>Icon</label>
-              <div class="emoji-picker-wrapper">
-                <button type="button" class="emoji-picker-btn" id="category-emoji-btn" title="Pick an icon">📁</button>
-                <div class="emoji-grid hidden" id="category-emoji-grid"></div>
-              </div>
-              <input type="hidden" id="category-emoji" value="📁">
-            </div>
-            <div class="form-group">
-              <label for="category-name">Category Name</label>
-              <input type="text" id="category-name" placeholder="e.g., Dev Tools" required>
-            </div>
-            <button type="submit" class="btn btn-primary" style="align-self:flex-end">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Add
-            </button>
-            <button type="button" id="update-category-btn" class="btn btn-update hidden" style="align-self:flex-end">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-              Update
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <div class="card-header">
-          <h2>Saved Categories</h2>
-        </div>
-        <div id="category-list"></div>
-        <div id="category-empty" class="empty-list hidden">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-          <p>No categories created yet. Add one to organize your search shortcuts.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Trash Tab -->
-    <div class="tab-panel" id="tab-trash">
-      <div class="card">
-        <div class="card-header">
-          <h2>Recently Deleted</h2>
-          <button id="empty-trash-btn" class="btn btn-danger" style="padding:6px 14px;font-size:12px;border:1px solid var(--danger);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-            Empty Trash
+        <div class="bulk-bar-actions">
+          <select id="bulk-move-category" class="bulk-move-select" title="Move to category">
+            <option value="" disabled selected>Move to...</option>
+          </select>
+          <button id="bulk-export-btn" class="bulk-btn" title="Export selected">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Export
           </button>
+          <button id="bulk-delete-btn" class="bulk-btn bulk-btn-danger" title="Delete selected">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            Delete
+          </button>
+          <button id="bulk-cancel-btn" class="bulk-btn bulk-btn-cancel" title="Cancel selection">Cancel</button>
         </div>
-        <div class="info-tip" style="margin:16px 20px 0">
+      </div>
+      <div id="url-list"></div>
+      <div id="url-no-results" class="empty-list hidden">
+        <p>No URLs match your filter.</p>
+      </div>
+      <div id="url-empty" class="empty-list hidden">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <p>No search URLs added yet. Add one above to get started.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Presets Tab -->
+  <div class="tab-panel" id="tab-presets">
+    <div class="card">
+      <div class="card-header">
+        <h2>Search Engine Presets</h2>
+        <div class="search-filter">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="preset-search" placeholder="Filter presets...">
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-tip">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-          <span>Deleted shortcuts are kept here for <strong id="trash-retention-display">15 days</strong> before being permanently removed. You can restore them at any time.</span>
+          <span>Browse popular search engines below and click <strong>Add</strong> to instantly add them to your Search URLs. Already added presets are marked with a checkmark.</span>
         </div>
-        <div id="trash-list"></div>
-        <div id="trash-empty" class="empty-list hidden">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-          <p>Trash is empty. Deleted shortcuts will appear here.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Environments Tab -->
-    <div class="tab-panel" id="tab-environments">
-      <div class="card">
-        <div class="card-header">
-          <h2>Add Environment</h2>
-        </div>
-        <div class="card-body">
-          <div class="info-tip">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            <span>Environments let you switch variable values per context (e.g., dev, staging, prod). When a URL uses <code>{{VAR}}</code>, you'll be able to choose an environment from the right-click menu.</span>
-          </div>
-          <form id="add-env-form" class="form-row">
-            <div class="form-group">
-              <label for="env-name">Environment Name</label>
-              <input type="text" id="env-name" placeholder="e.g., PRODUCTION" required>
-            </div>
-            <button type="submit" class="btn btn-primary" style="align-self:flex-end">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              Add
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <div class="card-header">
-          <h2>Saved Environments</h2>
-        </div>
-        <div id="env-list"></div>
-        <div id="env-empty" class="empty-list hidden">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-          <p>No environments created yet. Add one to manage variable overrides.</p>
-        </div>
-      </div>
-    </div>
-    <!-- Settings Tab -->
-    <div class="tab-panel" id="tab-settings">
-      <div class="card">
-        <div class="card-header">
-          <h2>Preferences</h2>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-row">
-            <div class="setting-label">
-              <h3>Theme</h3>
-              <p>Choose how the extension looks.</p>
-            </div>
-            <div class="setting-control">
-              <div class="theme-toggle">
-                <button class="theme-btn" data-theme="light" title="Light">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                </button>
-                <button class="theme-btn" data-theme="system" title="System">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                </button>
-                <button class="theme-btn" data-theme="dark" title="Dark">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-row">
-            <div class="setting-label">
-              <h3>Trash Retention</h3>
-              <p>Days to keep deleted shortcuts before permanent removal.</p>
-            </div>
-            <div class="setting-control">
-              <input type="number" id="setting-trash-days" min="1" max="90" value="15"> days
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-row">
-            <div class="setting-label">
-              <h3>New Tab Position</h3>
-              <p>Where to open shortcut links.</p>
-            </div>
-            <div class="setting-control">
-              <select id="setting-tab-position">
-                <option value="next">Next to current tab</option>
-                <option value="end">End of tab bar</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-row">
-            <div class="setting-label">
-              <h3>Default Category</h3>
-              <p>Auto-select this category when adding new URLs.</p>
-            </div>
-            <div class="setting-control">
-              <select id="setting-default-category">
-                <option value="">None</option>
-              </select>
-            </div>
-          </div>
+        <div class="preset-category-filters" id="preset-category-filters"></div>
+        <div class="preset-grid" id="preset-grid"></div>
+        <div id="preset-no-results" class="empty-list hidden">
+          <p>No presets match your filter.</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Tutorial Overlay -->
-  <div class="tutorial-overlay hidden" id="tutorial-overlay">
-    <div class="tutorial-card">
-      <button class="tutorial-close" id="tutorial-close" title="Close tutorial">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-      <div class="tutorial-icon" id="tutorial-icon"></div>
-      <h2 id="tutorial-title"></h2>
-      <div id="tutorial-body"></div>
-      <div class="tutorial-steps" id="tutorial-dots"></div>
-      <div class="tutorial-actions">
-        <button class="tutorial-skip" id="tutorial-skip">Skip tutorial</button>
-        <button class="tutorial-next" id="tutorial-next">
-          Next
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+  <!-- Variables Tab -->
+  <div class="tab-panel" id="tab-variables">
+    <div class="card">
+      <div class="card-header">
+        <h2>Add Variable</h2>
+      </div>
+      <div class="card-body">
+        <div class="info-tip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>Variables let you parameterize your URLs. Reference them in URLs as <code>{{VAR_NAME}}</code>. Each environment can override the default value.</span>
+        </div>
+        <form id="add-variable-form" class="form-row">
+          <div class="form-group">
+            <label for="variable-name">Variable Name</label>
+            <input type="text" id="variable-name" placeholder="e.g., INSTANCE" required>
+          </div>
+          <div class="form-group">
+            <label for="variable-default-value">Default Value</label>
+            <input type="text" id="variable-default-value" placeholder="e.g., prod001" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="align-self:flex-end">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Add
+          </button>
+          <button type="button" id="update-variable-btn" class="btn btn-update hidden" style="align-self:flex-end">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            Update
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <h2>Saved Variables</h2>
+      </div>
+      <div id="variable-list"></div>
+      <div id="variable-empty" class="empty-list hidden">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <p>No variables defined yet. Add one to make your URLs dynamic.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories Tab -->
+  <div class="tab-panel" id="tab-categories">
+    <div class="card">
+      <div class="card-header">
+        <h2>Add Category</h2>
+      </div>
+      <div class="card-body">
+        <div class="info-tip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>Categories let you group your search shortcuts into folders (e.g., "Work", "Dev Tools", "Social"). Categorized URLs appear as nested submenus in the right-click context menu.</span>
+        </div>
+        <form id="add-category-form" class="form-row">
+          <div class="form-group" style="flex:0 0 auto">
+            <label>Icon</label>
+            <div class="emoji-picker-wrapper">
+              <button type="button" class="emoji-picker-btn" id="category-emoji-btn" title="Pick an icon">📁</button>
+              <div class="emoji-grid hidden" id="category-emoji-grid"></div>
+            </div>
+            <input type="hidden" id="category-emoji" value="📁">
+          </div>
+          <div class="form-group">
+            <label for="category-name">Category Name</label>
+            <input type="text" id="category-name" placeholder="e.g., Dev Tools" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="align-self:flex-end">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Add
+          </button>
+          <button type="button" id="update-category-btn" class="btn btn-update hidden" style="align-self:flex-end">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            Update
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <h2>Saved Categories</h2>
+      </div>
+      <div id="category-list"></div>
+      <div id="category-empty" class="empty-list hidden">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <p>No categories created yet. Add one to organize your search shortcuts.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trash Tab -->
+  <div class="tab-panel" id="tab-trash">
+    <div class="card">
+      <div class="card-header">
+        <h2>Recently Deleted</h2>
+        <button id="empty-trash-btn" class="btn btn-danger" style="padding:6px 14px;font-size:12px;border:1px solid var(--danger);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          Empty Trash
         </button>
       </div>
+      <div class="info-tip" style="margin:16px 20px 0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <span>Deleted shortcuts are kept here for <strong id="trash-retention-display">15 days</strong> before being permanently removed. You can restore them at any time.</span>
+      </div>
+      <div id="trash-list"></div>
+      <div id="trash-empty" class="empty-list hidden">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        <p>Trash is empty. Deleted shortcuts will appear here.</p>
+      </div>
     </div>
   </div>
 
-  <!-- Toast -->
-  <div class="toast" id="toast"></div>
+  <!-- Environments Tab -->
+  <div class="tab-panel" id="tab-environments">
+    <div class="card">
+      <div class="card-header">
+        <h2>Add Environment</h2>
+      </div>
+      <div class="card-body">
+        <div class="info-tip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>Environments let you switch variable values per context (e.g., dev, staging, prod). When a URL uses <code>{{VAR}}</code>, you'll be able to choose an environment from the right-click menu.</span>
+        </div>
+        <form id="add-env-form" class="form-row">
+          <div class="form-group">
+            <label for="env-name">Environment Name</label>
+            <input type="text" id="env-name" placeholder="e.g., PRODUCTION" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="align-self:flex-end">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Add
+          </button>
+        </form>
+      </div>
+    </div>
 
-  <script src="theme.js"></script>
-  <script src="options.js"></script>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <h2>Saved Environments</h2>
+      </div>
+      <div id="env-list"></div>
+      <div id="env-empty" class="empty-list hidden">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        <p>No environments created yet. Add one to manage variable overrides.</p>
+      </div>
+    </div>
+  </div>
+  <!-- Settings Tab -->
+  <div class="tab-panel" id="tab-settings">
+    <div class="card">
+      <div class="card-header">
+        <h2>Preferences</h2>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-row">
+          <div class="setting-label">
+            <h3>Theme</h3>
+            <p>Choose how the extension looks.</p>
+          </div>
+          <div class="setting-control">
+            <div class="theme-toggle">
+              <button class="theme-btn" data-theme="light" title="Light">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              </button>
+              <button class="theme-btn" data-theme="system" title="System">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </button>
+              <button class="theme-btn" data-theme="dark" title="Dark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-row">
+          <div class="setting-label">
+            <h3>Trash Retention</h3>
+            <p>Days to keep deleted shortcuts before permanent removal.</p>
+          </div>
+          <div class="setting-control">
+            <input type="number" id="setting-trash-days" min="1" max="90" value="15"> days
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-row">
+          <div class="setting-label">
+            <h3>New Tab Position</h3>
+            <p>Where to open shortcut links.</p>
+          </div>
+          <div class="setting-control">
+            <select id="setting-tab-position">
+              <option value="next">Next to current tab</option>
+              <option value="end">End of tab bar</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-row">
+          <div class="setting-label">
+            <h3>Default Category</h3>
+            <p>Auto-select this category when adding new URLs.</p>
+          </div>
+          <div class="setting-control">
+            <select id="setting-default-category">
+              <option value="">None</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-row">
+          <div class="setting-label">
+            <h3>Preset Menu Layout</h3>
+            <p>How presets appear in the right-click context menu.</p>
+          </div>
+          <div class="setting-control">
+            <select id="setting-preset-menu-layout">
+              <option value="flat">Flat list</option>
+              <option value="grouped">Grouped by category</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Right-Click Menu Order</h3>
+        <p>Drag to reorder how sections appear in the right-click context menu.</p>
+        <div id="context-menu-order" class="context-menu-order-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial Overlay -->
+<div class="tutorial-overlay hidden" id="tutorial-overlay">
+  <div class="tutorial-card">
+    <button class="tutorial-close" id="tutorial-close" title="Close tutorial">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+    <div class="tutorial-icon" id="tutorial-icon"></div>
+    <h2 id="tutorial-title"></h2>
+    <div id="tutorial-body"></div>
+    <div class="tutorial-steps" id="tutorial-dots"></div>
+    <div class="tutorial-actions">
+      <button class="tutorial-skip" id="tutorial-skip">Skip tutorial</button>
+      <button class="tutorial-next" id="tutorial-next">
+        Next
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="theme.js"></script>
+<script src="options.js"></script>
 </body>
 </html>

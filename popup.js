@@ -78,8 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
     shortcutsList.innerHTML = '';
     const favSet = new Set(favorites || []);
     const filtered = filter
-      ? urls.filter(u => u.name.toLowerCase().includes(filter) || u.url.toLowerCase().includes(filter))
-      : urls;
+        ? urls.filter(u => u.name.toLowerCase().includes(filter) || u.url.toLowerCase().includes(filter))
+        : urls;
 
     if (filtered.length === 0 && urls.length === 0) {
       shortcutsList.style.display = 'none';
@@ -213,8 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const tabTitle = tabs[0].title || 'New Search';
         chrome.tabs.create({
           url: chrome.runtime.getURL('options.html') +
-            '?prefillName=' + encodeURIComponent(tabTitle) +
-            '&prefillUrl=' + encodeURIComponent(tabUrl)
+              '?prefillName=' + encodeURIComponent(tabTitle) +
+              '&prefillUrl=' + encodeURIComponent(tabUrl)
         });
       }
     });
