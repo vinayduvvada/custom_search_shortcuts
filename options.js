@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingTrashDays = document.getElementById('setting-trash-days');
   const settingTabPosition = document.getElementById('setting-tab-position');
   const settingDefaultCategory = document.getElementById('setting-default-category');
-  const DEFAULT_SETTINGS = { trashDays: 15, tabPosition: 'next', defaultCategory: '' };
+  const DEFAULT_SETTINGS = { trashDays: 15, tabPosition: 'next', defaultCategory: '', contextMenuOrder: ['favorites', 'presets', 'urls', 'categories'], presetMenuLayout: 'flat' };
   let currentSettings = { ...DEFAULT_SETTINGS };
 
   const addCategoryForm = document.getElementById('add-category-form');
@@ -88,6 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlSearchInput = document.getElementById('url-search');
   const urlNoResults = document.getElementById('url-no-results');
 
+  // --- Bulk Action Selectors ---
+  const bulkSelectToggle = document.getElementById('bulk-select-toggle');
+  const bulkBar = document.getElementById('bulk-bar');
+  const bulkCount = document.getElementById('bulk-count');
+  const bulkSelectAll = document.getElementById('bulk-select-all');
+  const bulkMoveCategory = document.getElementById('bulk-move-category');
+  const bulkExportBtn = document.getElementById('bulk-export-btn');
+  const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+  const bulkCancelBtn = document.getElementById('bulk-cancel-btn');
+  let bulkMode = false;
+  let bulkSelectedIds = new Set();
+
   const ICON_COLORS = ['#4f46e5', '#0891b2', '#059669', '#d97706', '#dc2626', '#7c3aed', '#db2777', '#0d9488'];
   const DRAG_HANDLE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
 
@@ -126,6 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('env-count').textContent = data.environments.length;
       document.getElementById('category-count').textContent = data.categories.length;
       document.getElementById('trash-count').textContent = data.trash.length;
+      const presetUrls = new Set(PRESET_CATALOG.map(p => p.url));
+      const addedPresetCount = data.urls.filter(u => u.source === 'preset' || presetUrls.has(u.url)).length;
+      document.getElementById('preset-count').textContent = addedPresetCount;
     });
   }
 
@@ -225,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadUrls(filter) {
     chrome.storage.sync.get({ urls: [], categories: [], favorites: [] }, (data) => {
       urlList.innerHTML = '';
+      if (bulkMode) urlList.classList.add('bulk-mode'); else urlList.classList.remove('bulk-mode');
       const searchTerm = (filter !== undefined ? filter : (urlSearchInput.value || '')).trim().toLowerCase();
       const favSet = new Set(data.favorites || []);
 
@@ -236,8 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         urlEmpty.classList.add('hidden');
         const filtered = searchTerm
-          ? data.urls.filter(u => u.name.toLowerCase().includes(searchTerm) || u.url.toLowerCase().includes(searchTerm))
-          : data.urls;
+            ? data.urls.filter(u => u.name.toLowerCase().includes(searchTerm) || u.url.toLowerCase().includes(searchTerm))
+            : data.urls;
 
         if (filtered.length === 0) {
           urlNoResults.classList.remove('hidden');
@@ -248,18 +264,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
           filtered.forEach(item => {
             const div = document.createElement('div');
-            div.className = 'list-item';
-            div.draggable = true;
+            div.className = 'list-item' + (bulkSelectedIds.has(item.id) ? ' bulk-selected' : '');
+            div.draggable = !bulkMode;
             div.dataset.id = item.id;
             const color = getIconColor(item.name);
             const isFav = favSet.has(item.id);
             const catName = item.category && categoryMap[item.category]
-              ? categoryMap[item.category]
-              : '';
+                ? categoryMap[item.category]
+                : '';
             const catBadge = catName
-              ? `<span class="category-badge">${catName}</span>`
-              : '';
+                ? `<span class="category-badge">${catName}</span>`
+                : '';
+            const isChecked = bulkSelectedIds.has(item.id);
             div.innerHTML = `
+              <div class="bulk-checkbox${isChecked ? ' checked' : ''}" data-id="${item.id}"></div>
               <div class="drag-handle" title="Drag to reorder">${DRAG_HANDLE_SVG}</div>
               <div class="list-item-icon" style="background:${color}">${getInitials(item.name)}</div>
               <div class="list-item-content">
@@ -287,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       updateBadgeCounts();
+      if (bulkMode) updateBulkUI();
     });
   }
 
@@ -317,6 +336,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   urlList.addEventListener('click', (e) => {
+    // --- Bulk mode: row click toggles selection ---
+    if (bulkMode) {
+      const listItem = e.target.closest('.list-item');
+      if (!listItem) return;
+      const itemId = listItem.dataset.id;
+      if (bulkSelectedIds.has(itemId)) {
+        bulkSelectedIds.delete(itemId);
+      } else {
+        bulkSelectedIds.add(itemId);
+      }
+      loadUrls();
+      return;
+    }
+
     const btn = e.target.closest('button');
     if (!btn) return;
     const urlId = btn.dataset.id;
@@ -375,10 +408,12 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.sync.set({ urls: filteredUrls, trash: newTrash, favorites: newFavs }, () => {
           loadUrls();
           loadTrash();
+          loadPresets();
           showToast('Moved to trash', () => {
             chrome.storage.sync.set({ urls: data.urls, trash: data.trash, favorites: data.favorites }, () => {
               loadUrls();
               loadTrash();
+              loadPresets();
               showToast('Deletion undone');
             });
           });
@@ -413,6 +448,146 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
     }
+  });
+
+  // --- Bulk Actions ---
+  function enterBulkMode() {
+    bulkMode = true;
+    bulkSelectedIds.clear();
+    bulkSelectToggle.classList.add('active');
+    bulkSelectToggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Selecting';
+    bulkBar.classList.add('active');
+    populateBulkMoveSelect();
+    loadUrls();
+  }
+
+  function exitBulkMode() {
+    bulkMode = false;
+    bulkSelectedIds.clear();
+    bulkSelectToggle.classList.remove('active');
+    bulkSelectToggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Select';
+    bulkBar.classList.remove('active');
+    loadUrls();
+  }
+
+  function updateBulkUI() {
+    const count = bulkSelectedIds.size;
+    bulkCount.textContent = count + ' selected';
+    const allItems = urlList.querySelectorAll('.list-item');
+    const totalVisible = allItems.length;
+
+    bulkSelectAll.classList.remove('checked', 'partial');
+    if (count > 0 && count === totalVisible) {
+      bulkSelectAll.classList.add('checked');
+    } else if (count > 0) {
+      bulkSelectAll.classList.add('partial');
+    }
+
+    const hasSelection = count > 0;
+    bulkDeleteBtn.disabled = !hasSelection;
+    bulkExportBtn.disabled = !hasSelection;
+    bulkMoveCategory.disabled = !hasSelection;
+    bulkDeleteBtn.style.opacity = hasSelection ? '1' : '0.5';
+    bulkExportBtn.style.opacity = hasSelection ? '1' : '0.5';
+    bulkMoveCategory.style.opacity = hasSelection ? '1' : '0.5';
+  }
+
+  function populateBulkMoveSelect() {
+    chrome.storage.sync.get({ categories: [] }, (data) => {
+      bulkMoveCategory.innerHTML = '<option value="" disabled selected>Move to...</option><option value="__none__">No category</option>';
+      data.categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = (cat.icon || '📁') + ' ' + cat.name;
+        bulkMoveCategory.appendChild(opt);
+      });
+    });
+  }
+
+  bulkSelectToggle.addEventListener('click', () => {
+    if (bulkMode) exitBulkMode(); else enterBulkMode();
+  });
+
+  bulkCancelBtn.addEventListener('click', exitBulkMode);
+
+  bulkSelectAll.addEventListener('click', () => {
+    const allItems = urlList.querySelectorAll('.list-item');
+    const allIds = Array.from(allItems).map(el => el.dataset.id);
+    if (bulkSelectedIds.size === allIds.length) {
+      bulkSelectedIds.clear();
+    } else {
+      allIds.forEach(id => bulkSelectedIds.add(id));
+    }
+    loadUrls();
+  });
+
+  bulkDeleteBtn.addEventListener('click', () => {
+    const count = bulkSelectedIds.size;
+    if (count === 0) return;
+    if (!confirm(`Delete ${count} shortcut${count !== 1 ? 's' : ''}? They will be moved to trash.`)) return;
+
+    chrome.storage.sync.get({ urls: [], trash: [], favorites: [] }, (data) => {
+      const idsToDelete = new Set(bulkSelectedIds);
+      const deletedItems = data.urls.filter(u => idsToDelete.has(u.id)).map(u => ({ ...u, deletedAt: Date.now() }));
+      const remainingUrls = data.urls.filter(u => !idsToDelete.has(u.id));
+      const newTrash = [...deletedItems, ...data.trash];
+      const newFavs = data.favorites.filter(id => !idsToDelete.has(id));
+
+      chrome.storage.sync.set({ urls: remainingUrls, trash: newTrash, favorites: newFavs }, () => {
+        const prevUrls = data.urls;
+        const prevTrash = data.trash;
+        const prevFavs = data.favorites;
+        exitBulkMode();
+        loadTrash();
+        loadPresets();
+        showToast(`${count} shortcut${count !== 1 ? 's' : ''} moved to trash`, () => {
+          chrome.storage.sync.set({ urls: prevUrls, trash: prevTrash, favorites: prevFavs }, () => {
+            loadUrls();
+            loadTrash();
+            loadPresets();
+            showToast('Deletion undone');
+          });
+        });
+      });
+    });
+  });
+
+  bulkExportBtn.addEventListener('click', () => {
+    const count = bulkSelectedIds.size;
+    if (count === 0) return;
+    chrome.storage.sync.get({ urls: [] }, (data) => {
+      const selected = data.urls.filter(u => bulkSelectedIds.has(u.id));
+      const exportData = { urls: selected, variables: [], environments: [], categories: [] };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `custom_shortcuts_selected_${count}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`${count} shortcut${count !== 1 ? 's' : ''} exported`);
+    });
+  });
+
+  bulkMoveCategory.addEventListener('change', () => {
+    const count = bulkSelectedIds.size;
+    if (count === 0) { bulkMoveCategory.value = ''; return; }
+    const targetCategory = bulkMoveCategory.value;
+
+    chrome.storage.sync.get({ urls: [] }, (data) => {
+      const idsToMove = new Set(bulkSelectedIds);
+      const newUrls = data.urls.map(u => {
+        if (!idsToMove.has(u.id)) return u;
+        const updated = { ...u };
+        if (targetCategory === '__none__') { delete updated.category; } else { updated.category = targetCategory; }
+        return updated;
+      });
+      chrome.storage.sync.set({ urls: newUrls }, () => {
+        const label = targetCategory === '__none__' ? 'No category' : bulkMoveCategory.options[bulkMoveCategory.selectedIndex].textContent;
+        exitBulkMode();
+        showToast(`${count} shortcut${count !== 1 ? 's' : ''} moved to ${label}`);
+      });
+    });
   });
 
   // --- Variable Management ---
@@ -518,7 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return showToast('Another variable with this name already exists');
         }
         const newVariables = data.variables.map(v =>
-          v.name === editingVariable ? { ...v, name, defaultValue } : v
+            v.name === editingVariable ? { ...v, name, defaultValue } : v
         );
         const updatedEnvs = data.environments.map(env => {
           env.values = env.values.map(val => val.key === editingVariable ? { ...val, key: name } : val);
@@ -556,8 +731,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const savedValue = env.values.find(v => v.key === variable.name);
             const value = savedValue ? savedValue.value : '';
             const displayValue = value
-              ? `<span class="env-var-value">${value}</span>`
-              : `<span class="env-var-value env-var-default">default: ${variable.defaultValue}</span>`;
+                ? `<span class="env-var-value">${value}</span>`
+                : `<span class="env-var-value env-var-default">default: ${variable.defaultValue}</span>`;
             return `
               <div class="env-var-row" data-env-id="${env.id}" data-variable-name="${variable.name}">
                 <span class="env-var-key">${variable.name}</span>
@@ -681,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return showToast('Another environment with this name already exists');
         }
         const newEnvironments = data.environments.map(env =>
-          env.id === envId ? { ...env, name: newName } : env
+            env.id === envId ? { ...env, name: newName } : env
         );
         chrome.storage.sync.set({ environments: newEnvironments }, () => {
           loadEnvs();
@@ -856,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const icon = categoryEmojiInput.value || '📁';
         const newCategories = data.categories.map(c =>
-          c.id === editingCategoryId ? { ...c, name, icon } : c
+            c.id === editingCategoryId ? { ...c, name, icon } : c
         );
         chrome.storage.sync.set({ categories: newCategories }, () => {
           categoryNameInput.value = '';
@@ -952,6 +1127,11 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.sync.get({ urls: [], trash: [] }, (data) => {
         const trashItem = data.trash.find(t => t.id === itemId);
         if (!trashItem) return;
+        const duplicateUrl = data.urls.find(u => u.url === trashItem.url);
+        if (duplicateUrl) {
+          showToast('A shortcut with this URL already exists: ' + duplicateUrl.name);
+          return;
+        }
         const restored = { ...trashItem };
         delete restored.deletedAt;
         const newUrls = [...data.urls, restored];
@@ -959,6 +1139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.sync.set({ urls: newUrls, trash: newTrash }, () => {
           loadUrls();
           loadTrash();
+          loadPresets();
           showToast('Shortcut restored');
         });
       });
@@ -1138,33 +1319,218 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(hideVarSuggestions, 150);
   });
 
+  // --- Preset / Template Library ---
+  const PRESET_CATALOG = [
+    // General Search
+    { name: 'Google', url: 'https://www.google.com/search?q=%s', icon: '🔍', category: 'General Search' },
+    { name: 'Bing', url: 'https://www.bing.com/search?q=%s', icon: '🔎', category: 'General Search' },
+    { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s', icon: '🦆', category: 'General Search' },
+    { name: 'Brave Search', url: 'https://search.brave.com/search?q=%s', icon: '🦁', category: 'General Search' },
+    { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=%s', icon: '🌳', category: 'General Search' },
+    // Developer Tools
+    { name: 'GitHub', url: 'https://github.com/search?q=%s', icon: '🐙', category: 'Developer' },
+    { name: 'GitHub Code Search', url: 'https://github.com/search?q=%s&type=code', icon: '🐙', category: 'Developer' },
+    { name: 'Stack Overflow', url: 'https://stackoverflow.com/search?q=%s', icon: '📚', category: 'Developer' },
+    { name: 'MDN Web Docs', url: 'https://developer.mozilla.org/en-US/search?q=%s', icon: '📖', category: 'Developer' },
+    { name: 'npm', url: 'https://www.npmjs.com/search?q=%s', icon: '📦', category: 'Developer' },
+    { name: 'PyPI', url: 'https://pypi.org/search/?q=%s', icon: '🐍', category: 'Developer' },
+    { name: 'crates.io', url: 'https://crates.io/search?q=%s', icon: '🦀', category: 'Developer' },
+    { name: 'Maven Central', url: 'https://search.maven.org/search?q=%s', icon: '☕', category: 'Developer' },
+    { name: 'Can I Use', url: 'https://caniuse.com/?search=%s', icon: '✅', category: 'Developer' },
+    { name: 'DevDocs', url: 'https://devdocs.io/#q=%s', icon: '📄', category: 'Developer' },
+    { name: 'GitLab', url: 'https://gitlab.com/search?search=%s', icon: '🦊', category: 'Developer' },
+    // AI & Reference
+    { name: 'ChatGPT', url: 'https://chatgpt.com/?q=%s', icon: '🤖', category: 'AI & Reference' },
+    { name: 'Perplexity', url: 'https://www.perplexity.ai/search?q=%s', icon: '🧠', category: 'AI & Reference' },
+    { name: 'Wolfram Alpha', url: 'https://www.wolframalpha.com/input?i=%s', icon: '🔬', category: 'AI & Reference' },
+    { name: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Special:Search/%s', icon: '🌐', category: 'AI & Reference' },
+    // Social & Media
+    { name: 'YouTube', url: 'https://www.youtube.com/results?search_query=%s', icon: '🎬', category: 'Social & Media' },
+    { name: 'Reddit', url: 'https://www.reddit.com/search/?q=%s', icon: '🟠', category: 'Social & Media' },
+    { name: 'X (Twitter)', url: 'https://x.com/search?q=%s', icon: '🐦', category: 'Social & Media' },
+    { name: 'LinkedIn', url: 'https://www.linkedin.com/search/results/all/?keywords=%s', icon: '💼', category: 'Social & Media' },
+    // Design & Assets
+    { name: 'Dribbble', url: 'https://dribbble.com/search/%s', icon: '🎨', category: 'Design' },
+    { name: 'Unsplash', url: 'https://unsplash.com/s/photos/%s', icon: '📷', category: 'Design' },
+    { name: 'Google Fonts', url: 'https://fonts.google.com/?query=%s', icon: '🔤', category: 'Design' },
+    { name: 'Figma Community', url: 'https://www.figma.com/community/search?resource_type=mixed&sort_by=relevancy&query=%s', icon: '🖌️', category: 'Design' },
+    // Cloud & DevOps
+    { name: 'Docker Hub', url: 'https://hub.docker.com/search?q=%s', icon: '🐳', category: 'Cloud & DevOps' },
+    { name: 'AWS Docs', url: 'https://docs.aws.amazon.com/search/doc-search.html#facet_doc_product=&facet_doc_guide=&this_doc_guide=&doc_locale=en_us#702702702702702702&q=%s', icon: '☁️', category: 'Cloud & DevOps' },
+    { name: 'Terraform Registry', url: 'https://registry.terraform.io/search?q=%s', icon: '🏗️', category: 'Cloud & DevOps' },
+    // Shopping & Maps
+    { name: 'Amazon', url: 'https://www.amazon.com/s?k=%s', icon: '🛒', category: 'Shopping & Maps' },
+    { name: 'Google Maps', url: 'https://www.google.com/maps/search/%s', icon: '🗺️', category: 'Shopping & Maps' },
+    { name: 'eBay', url: 'https://www.ebay.com/sch/i.html?_nkw=%s', icon: '🏷️', category: 'Shopping & Maps' }
+  ];
+
+  const presetGrid = document.getElementById('preset-grid');
+  const presetSearch = document.getElementById('preset-search');
+  const presetNoResults = document.getElementById('preset-no-results');
+  const presetCategoryFilters = document.getElementById('preset-category-filters');
+  let activePresetCategory = 'All';
+
+  function getPresetCategories() {
+    const cats = [];
+    PRESET_CATALOG.forEach(p => {
+      if (!cats.includes(p.category)) cats.push(p.category);
+    });
+    return cats;
+  }
+
+  function renderPresetFilters() {
+    const cats = getPresetCategories();
+    presetCategoryFilters.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className = 'preset-filter-pill' + (activePresetCategory === 'All' ? ' active' : '');
+    allBtn.textContent = 'All';
+    allBtn.addEventListener('click', () => { activePresetCategory = 'All'; renderPresetFilters(); loadPresets(); });
+    presetCategoryFilters.appendChild(allBtn);
+
+    cats.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'preset-filter-pill' + (activePresetCategory === cat ? ' active' : '');
+      btn.textContent = cat;
+      btn.addEventListener('click', () => { activePresetCategory = cat; renderPresetFilters(); loadPresets(); });
+      presetCategoryFilters.appendChild(btn);
+    });
+  }
+
+  function loadPresets() {
+    chrome.storage.sync.get({ urls: [] }, (data) => {
+      const existingUrls = new Set(data.urls.map(u => u.url));
+      const searchTerm = (presetSearch.value || '').trim().toLowerCase();
+
+      let filtered = PRESET_CATALOG;
+      if (activePresetCategory !== 'All') {
+        filtered = filtered.filter(p => p.category === activePresetCategory);
+      }
+      if (searchTerm) {
+        filtered = filtered.filter(p =>
+            p.name.toLowerCase().includes(searchTerm) ||
+            p.url.toLowerCase().includes(searchTerm) ||
+            p.category.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      presetGrid.innerHTML = '';
+
+      if (filtered.length === 0) {
+        presetNoResults.classList.remove('hidden');
+        return;
+      }
+      presetNoResults.classList.add('hidden');
+
+      const grouped = {};
+      filtered.forEach(p => {
+        if (!grouped[p.category]) grouped[p.category] = [];
+        grouped[p.category].push(p);
+      });
+
+      const cats = getPresetCategories();
+      cats.forEach(cat => {
+        if (!grouped[cat]) return;
+        if (activePresetCategory === 'All') {
+          const header = document.createElement('div');
+          header.className = 'preset-section-header';
+          header.textContent = cat;
+          presetGrid.appendChild(header);
+        }
+        grouped[cat].forEach(preset => {
+          const isAdded = existingUrls.has(preset.url);
+          const card = document.createElement('div');
+          card.className = 'preset-card' + (isAdded ? ' preset-added' : '');
+          card.innerHTML = `
+            <div class="preset-card-icon">${preset.icon}</div>
+            <div class="preset-card-info">
+              <div class="preset-card-name">${preset.name}</div>
+              <div class="preset-card-url" title="${preset.url}">${preset.url}</div>
+            </div>
+            <div class="preset-card-actions">
+              ${isAdded
+              ? `<button class="preset-remove-btn" data-url="${preset.url}" data-name="${preset.name}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+                    Remove
+                  </button>`
+              : `<button class="preset-add-btn" data-name="${preset.name}" data-url="${preset.url}" data-category="${preset.category}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    Add
+                  </button>`
+          }
+            </div>
+          `;
+          presetGrid.appendChild(card);
+        });
+      });
+    });
+  }
+
+  presetSearch.addEventListener('input', loadPresets);
+
+  presetGrid.addEventListener('click', (e) => {
+    const addBtn = e.target.closest('.preset-add-btn');
+    if (addBtn) {
+      const name = addBtn.dataset.name;
+      const url = addBtn.dataset.url;
+      const presetCategory = addBtn.dataset.category;
+      chrome.storage.sync.get({ urls: [] }, (data) => {
+        const newItem = { id: `custom-search-${Date.now()}`, name, url, source: 'preset', presetCategory };
+        const newUrls = [...data.urls, newItem];
+        chrome.storage.sync.set({ urls: newUrls }, () => {
+          loadPresets();
+          loadUrls();
+          showToast(`"${name}" added to your search URLs`);
+        });
+      });
+      return;
+    }
+
+    const removeBtn = e.target.closest('.preset-remove-btn');
+    if (removeBtn) {
+      const url = removeBtn.dataset.url;
+      const name = removeBtn.dataset.name;
+      chrome.storage.sync.get({ urls: [], favorites: [] }, (data) => {
+        const newUrls = data.urls.filter(u => u.url !== url);
+        const removedIds = new Set(data.urls.filter(u => u.url === url).map(u => u.id));
+        const newFavs = data.favorites.filter(id => !removedIds.has(id));
+        chrome.storage.sync.set({ urls: newUrls, favorites: newFavs }, () => {
+          loadPresets();
+          loadUrls();
+          showToast(`"${name}" removed`);
+        });
+      });
+    }
+  });
+
+  renderPresetFilters();
+
   // --- Drag and Drop Reordering ---
   enableDragReorder(
-    urlList, '.list-item',
-    el => el.dataset.id,
-    'urls', 'id',
-    loadUrls
+      urlList, '.list-item',
+      el => el.dataset.id,
+      'urls', 'id',
+      loadUrls
   );
 
   enableDragReorder(
-    variableList, '.list-item',
-    el => el.dataset.variableName,
-    'variables', 'name',
-    () => { loadVariables(); loadEnvs(); }
+      variableList, '.list-item',
+      el => el.dataset.variableName,
+      'variables', 'name',
+      () => { loadVariables(); loadEnvs(); }
   );
 
   enableDragReorder(
-    envList, '.env-section',
-    el => el.dataset.envId,
-    'environments', 'id',
-    loadEnvs
+      envList, '.env-section',
+      el => el.dataset.envId,
+      'environments', 'id',
+      loadEnvs
   );
 
   enableDragReorder(
-    categoryList, '.list-item',
-    el => el.dataset.id,
-    'categories', 'id',
-    () => { loadCategories(); loadUrls(); }
+      categoryList, '.list-item',
+      el => el.dataset.id,
+      'categories', 'id',
+      () => { loadCategories(); loadUrls(); }
   );
 
   // --- Settings Management ---
@@ -1184,6 +1550,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cat.id === currentSettings.defaultCategory) opt.selected = true;
         settingDefaultCategory.appendChild(opt);
       });
+
+      const presetMenuLayoutSelect = document.getElementById('setting-preset-menu-layout');
+      if (presetMenuLayoutSelect) presetMenuLayoutSelect.value = currentSettings.presetMenuLayout || 'flat';
+
+      renderContextMenuOrder();
     });
   }
 
@@ -1212,6 +1583,103 @@ document.addEventListener('DOMContentLoaded', () => {
   settingDefaultCategory.addEventListener('change', () => {
     saveSettings({ defaultCategory: settingDefaultCategory.value });
   });
+
+  document.getElementById('setting-preset-menu-layout').addEventListener('change', (e) => {
+    saveSettings({ presetMenuLayout: e.target.value });
+  });
+
+  // --- Context Menu Order ---
+  const CONTEXT_MENU_SECTIONS = {
+    favorites: { icon: '⭐', label: 'Favorites' },
+    presets: { icon: '📚', label: 'Presets' },
+    urls: { icon: '🔗', label: 'Search URLs' },
+    categories: { icon: '🏷️', label: 'Categories' }
+  };
+  const contextMenuOrderContainer = document.getElementById('context-menu-order');
+  let cmoDraggedItem = null;
+  let cmoHandleClicked = false;
+
+  contextMenuOrderContainer.addEventListener('mousedown', (e) => {
+    cmoHandleClicked = !!e.target.closest('.order-handle');
+  });
+
+  contextMenuOrderContainer.addEventListener('dragstart', (e) => {
+    const item = e.target.closest('.context-menu-order-item');
+    if (!item || !cmoHandleClicked) { e.preventDefault(); return; }
+    cmoDraggedItem = item;
+    item.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  });
+
+  contextMenuOrderContainer.addEventListener('dragend', () => {
+    if (cmoDraggedItem) cmoDraggedItem.classList.remove('dragging');
+    contextMenuOrderContainer.querySelectorAll('.context-menu-order-item').forEach(el => {
+      el.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+    cmoDraggedItem = null;
+  });
+
+  contextMenuOrderContainer.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const item = e.target.closest('.context-menu-order-item');
+    if (!item || item === cmoDraggedItem) return;
+    contextMenuOrderContainer.querySelectorAll('.context-menu-order-item').forEach(el => {
+      el.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+    const rect = item.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    item.classList.add(e.clientY < midY ? 'drag-over-top' : 'drag-over-bottom');
+  });
+
+  contextMenuOrderContainer.addEventListener('dragleave', (e) => {
+    const item = e.target.closest('.context-menu-order-item');
+    if (item) item.classList.remove('drag-over-top', 'drag-over-bottom');
+  });
+
+  contextMenuOrderContainer.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const targetItem = e.target.closest('.context-menu-order-item');
+    if (!targetItem || !cmoDraggedItem || targetItem === cmoDraggedItem) return;
+    const rect = targetItem.getBoundingClientRect();
+    const insertAfter = e.clientY >= rect.top + rect.height / 2;
+
+    const currentOrder = currentSettings.contextMenuOrder || DEFAULT_SETTINGS.contextMenuOrder;
+    const newOrder = [...currentOrder];
+    const draggedKey = cmoDraggedItem.dataset.key;
+    const targetKey = targetItem.dataset.key;
+    const draggedIdx = newOrder.indexOf(draggedKey);
+    newOrder.splice(draggedIdx, 1);
+    let targetIdx = newOrder.indexOf(targetKey);
+    if (insertAfter) targetIdx++;
+    newOrder.splice(targetIdx, 0, draggedKey);
+
+    currentSettings.contextMenuOrder = newOrder;
+    saveSettings({ contextMenuOrder: newOrder });
+    renderContextMenuOrder();
+  });
+
+  function renderContextMenuOrder() {
+    const order = currentSettings.contextMenuOrder || DEFAULT_SETTINGS.contextMenuOrder;
+    contextMenuOrderContainer.innerHTML = '';
+
+    order.forEach((key, idx) => {
+      const section = CONTEXT_MENU_SECTIONS[key];
+      if (!section) return;
+      const item = document.createElement('div');
+      item.className = 'context-menu-order-item';
+      item.draggable = true;
+      item.dataset.key = key;
+      item.innerHTML = `
+        <span class="order-handle">${DRAG_HANDLE_SVG}</span>
+        <span class="order-number">${idx + 1}</span>
+        <span class="order-icon">${section.icon}</span>
+        <span class="order-label">${section.label}</span>
+      `;
+      contextMenuOrderContainer.appendChild(item);
+    });
+  }
 
   // --- Tutorial ---
   const TUTORIAL_STEPS = [
@@ -1265,6 +1733,19 @@ document.addEventListener('DOMContentLoaded', () => {
           <li><strong>Settings</strong> — configure theme, trash retention, tab position, and default category</li>
           <li><strong>Help</strong> — click the Help button anytime to replay this tutorial</li>
         </ul>`
+    },
+    {
+      icon: '🚀',
+      title: 'Quick Start with Presets',
+      body: `<p>Want to hit the ground running? Add all <strong>built-in preset search engines</strong> (Google, GitHub, Stack Overflow, YouTube, and more) to your shortcuts in one click.</p>
+        <p>You can always manage them later from the <strong>Presets</strong> tab.</p>
+        <div class="tutorial-preset-actions">
+          <button class="btn btn-add-all" id="tutorial-add-all-presets">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Add All Presets
+          </button>
+          <button class="btn btn-skip-presets" id="tutorial-skip-presets">No thanks</button>
+        </div>`
     }
   ];
 
@@ -1277,6 +1758,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const tutorialNext = document.getElementById('tutorial-next');
   const tutorialSkip = document.getElementById('tutorial-skip');
   const tutorialClose = document.getElementById('tutorial-close');
+
+  function addAllPresets(callback) {
+    chrome.storage.sync.get({ urls: [] }, (data) => {
+      const existingUrls = new Set(data.urls.map(u => u.url));
+      const newPresets = PRESET_CATALOG
+          .filter(p => !existingUrls.has(p.url))
+          .map(p => ({ id: `custom-search-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: p.name, url: p.url, source: 'preset', presetCategory: p.category }));
+      if (newPresets.length === 0) {
+        if (callback) callback(0);
+        return;
+      }
+      const newUrls = [...data.urls, ...newPresets];
+      chrome.storage.sync.set({ urls: newUrls }, () => {
+        loadUrls();
+        loadPresets();
+        if (callback) callback(newPresets.length);
+      });
+    });
+  }
 
   function renderTutorialStep() {
     const step = TUTORIAL_STEPS[tutorialStep];
@@ -1291,10 +1791,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isLast = tutorialStep === TUTORIAL_STEPS.length - 1;
     tutorialNext.innerHTML = isLast
-      ? 'Get Started <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>'
-      : 'Next <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
+        ? 'Get Started <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>'
+        : 'Next <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
     tutorialSkip.textContent = isLast ? '' : 'Skip tutorial';
     tutorialSkip.style.visibility = isLast ? 'hidden' : 'visible';
+
+    // Wire up preset buttons on the final step
+    const addAllBtn = document.getElementById('tutorial-add-all-presets');
+    const skipPresetsBtn = document.getElementById('tutorial-skip-presets');
+    if (addAllBtn) {
+      addAllBtn.addEventListener('click', () => {
+        addAllBtn.disabled = true;
+        addAllBtn.textContent = 'Adding...';
+        addAllPresets((count) => {
+          addAllBtn.textContent = count > 0 ? `${count} presets added!` : 'All presets already added';
+          setTimeout(() => closeTutorial(), 1200);
+        });
+      });
+    }
+    if (skipPresetsBtn) {
+      skipPresetsBtn.addEventListener('click', closeTutorial);
+    }
   }
 
   function showTutorial() {
@@ -1331,6 +1848,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Initial Load ---
   loadSettings();
   loadUrls();
+  loadPresets();
   loadVariables();
   loadEnvs();
   loadCategories();

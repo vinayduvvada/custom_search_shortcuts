@@ -1,3 +1,41 @@
+// Preset URL to category mapping (for grouping presets in context menu)
+const PRESET_CATEGORY_MAP = {
+  'https://www.google.com/search?q=%s': 'General Search',
+  'https://www.bing.com/search?q=%s': 'General Search',
+  'https://duckduckgo.com/?q=%s': 'General Search',
+  'https://search.brave.com/search?q=%s': 'General Search',
+  'https://www.ecosia.org/search?q=%s': 'General Search',
+  'https://github.com/search?q=%s': 'Developer',
+  'https://github.com/search?q=%s&type=code': 'Developer',
+  'https://stackoverflow.com/search?q=%s': 'Developer',
+  'https://developer.mozilla.org/en-US/search?q=%s': 'Developer',
+  'https://www.npmjs.com/search?q=%s': 'Developer',
+  'https://pypi.org/search/?q=%s': 'Developer',
+  'https://crates.io/search?q=%s': 'Developer',
+  'https://search.maven.org/search?q=%s': 'Developer',
+  'https://caniuse.com/?search=%s': 'Developer',
+  'https://devdocs.io/#q=%s': 'Developer',
+  'https://gitlab.com/search?search=%s': 'Developer',
+  'https://chatgpt.com/?q=%s': 'AI & Reference',
+  'https://www.perplexity.ai/search?q=%s': 'AI & Reference',
+  'https://www.wolframalpha.com/input?i=%s': 'AI & Reference',
+  'https://en.wikipedia.org/wiki/Special:Search/%s': 'AI & Reference',
+  'https://www.youtube.com/results?search_query=%s': 'Social & Media',
+  'https://www.reddit.com/search/?q=%s': 'Social & Media',
+  'https://x.com/search?q=%s': 'Social & Media',
+  'https://www.linkedin.com/search/results/all/?keywords=%s': 'Social & Media',
+  'https://dribbble.com/search/%s': 'Design',
+  'https://unsplash.com/s/photos/%s': 'Design',
+  'https://fonts.google.com/?query=%s': 'Design',
+  'https://www.figma.com/community/search?resource_type=mixed&sort_by=relevancy&query=%s': 'Design',
+  'https://hub.docker.com/search?q=%s': 'Cloud & DevOps',
+  'https://docs.aws.amazon.com/search/doc-search.html#facet_doc_product=&facet_doc_guide=&this_doc_guide=&doc_locale=en_us#702702702702702702&q=%s': 'Cloud & DevOps',
+  'https://registry.terraform.io/search?q=%s': 'Cloud & DevOps',
+  'https://www.amazon.com/s?k=%s': 'Shopping & Maps',
+  'https://www.google.com/maps/search/%s': 'Shopping & Maps',
+  'https://www.ebay.com/sch/i.html?_nkw=%s': 'Shopping & Maps'
+};
+
 // Create a parent menu item on installation
 chrome.runtime.onInstalled.addListener(() => {
   createParentMenu();
@@ -14,11 +52,13 @@ function createParentMenu() {
 
 // Function to load menu items from storage
 function loadMenuItems() {
-  chrome.storage.sync.get({ urls: [], variables: [], environments: [], categories: [], favorites: [] }, (data) => {
+  chrome.storage.sync.get({ urls: [], variables: [], environments: [], categories: [], favorites: [], settings: {} }, (data) => {
     chrome.contextMenus.removeAll(() => {
       createParentMenu();
-      const { urls, environments, categories, favorites } = data;
+      const { urls, environments, categories, favorites, settings } = data;
       const favSet = new Set(favorites || []);
+      const DEFAULT_ORDER = ['favorites', 'presets', 'urls', 'categories'];
+      const contextMenuOrder = (settings && settings.contextMenuOrder) || DEFAULT_ORDER;
 
       if (urls && urls.length > 0) {
         const categoryMap = {};
@@ -51,56 +91,123 @@ function loadMenuItems() {
           }
         };
 
-        // 0. Favorites first (pinned at top)
-        const favUrls = urls.filter(u => favSet.has(u.id));
-        const nonFavUrls = urls.filter(u => !favSet.has(u.id));
+        // Prepare section data
+        const presetUrls = urls.filter(u => u.source === 'preset');
+        const nonPresetUrls = urls.filter(u => u.source !== 'preset');
+        const favUrls = nonPresetUrls.filter(u => favSet.has(u.id));
+        const nonFavUrls = nonPresetUrls.filter(u => !favSet.has(u.id));
+        const uncategorizedUrls = nonFavUrls.filter(u => !u.category || !categoryMap[u.category]);
+        const usedCategories = categories.filter(cat => nonPresetUrls.some(u => u.category === cat.id));
 
-        if (favUrls.length > 0) {
-          favUrls.forEach(urlItem => addUrlMenu(urlItem, 'customSearchParent'));
-          if (nonFavUrls.length > 0) {
+        // Render sections in user-defined order
+        let sectionsRendered = 0;
+
+        const renderSection = {
+          favorites: () => {
+            if (favUrls.length === 0) return;
+            if (sectionsRendered > 0) {
+              chrome.contextMenus.create({
+                id: 'separator-favorites',
+                type: 'separator',
+                contexts: ['selection'],
+                parentId: 'customSearchParent'
+              });
+            }
+            favUrls.forEach(urlItem => addUrlMenu(urlItem, 'customSearchParent'));
+            sectionsRendered++;
+          },
+          presets: () => {
+            if (presetUrls.length === 0) return;
+            if (sectionsRendered > 0) {
+              chrome.contextMenus.create({
+                id: 'separator-presets',
+                type: 'separator',
+                contexts: ['selection'],
+                parentId: 'customSearchParent'
+              });
+            }
             chrome.contextMenus.create({
-              id: 'separator-favorites',
-              type: 'separator',
+              id: 'preset-submenu',
+              title: '📚 Presets',
               contexts: ['selection'],
               parentId: 'customSearchParent'
             });
-          }
-        }
-
-        // 1. Uncategorized (non-favorite) URLs
-        nonFavUrls.filter(u => !u.category || !categoryMap[u.category])
-          .forEach(urlItem => addUrlMenu(urlItem, 'customSearchParent'));
-
-        // 2. Separator between uncategorized URLs and categories (if both exist)
-        const hasUncategorized = nonFavUrls.some(u => !u.category || !categoryMap[u.category]);
-        const usedCategories = categories.filter(cat => urls.some(u => u.category === cat.id));
-        if ((hasUncategorized || favUrls.length > 0) && usedCategories.length > 0) {
-          chrome.contextMenus.create({
-            id: 'separator-categories',
-            type: 'separator',
-            contexts: ['selection'],
-            parentId: 'customSearchParent'
-          });
-        }
-
-        // 3. Category submenus with all their URLs (favorites appear here too)
-        usedCategories.forEach(cat => {
-          const icon = cat.icon || '📁';
-          chrome.contextMenus.create({
-            id: categoryMap[cat.id],
-            title: `${icon} ${cat.name}`,
-            contexts: ['selection'],
-            parentId: 'customSearchParent'
-          });
-          urls.filter(u => u.category === cat.id)
-            .forEach(urlItem => {
-              const suffix = favSet.has(urlItem.id) ? '_cat' : '';
-              addUrlMenu(urlItem, categoryMap[cat.id], suffix);
+            const presetMenuLayout = (settings && settings.presetMenuLayout) || 'flat';
+            if (presetMenuLayout === 'grouped') {
+              const presetGroups = {};
+              presetUrls.forEach(urlItem => {
+                const cat = urlItem.presetCategory || PRESET_CATEGORY_MAP[urlItem.url] || 'Other';
+                if (!presetGroups[cat]) presetGroups[cat] = [];
+                presetGroups[cat].push(urlItem);
+              });
+              Object.keys(presetGroups).forEach(cat => {
+                const groupId = `preset-group-${cat.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                chrome.contextMenus.create({
+                  id: groupId,
+                  title: cat,
+                  contexts: ['selection'],
+                  parentId: 'preset-submenu'
+                });
+                presetGroups[cat].forEach(urlItem => {
+                  const suffix = favSet.has(urlItem.id) ? '_preset' : '';
+                  addUrlMenu(urlItem, groupId, suffix);
+                });
+              });
+            } else {
+              presetUrls.forEach(urlItem => {
+                const suffix = favSet.has(urlItem.id) ? '_preset' : '';
+                addUrlMenu(urlItem, 'preset-submenu', suffix);
+              });
+            }
+            sectionsRendered++;
+          },
+          urls: () => {
+            if (uncategorizedUrls.length === 0) return;
+            if (sectionsRendered > 0) {
+              chrome.contextMenus.create({
+                id: 'separator-urls',
+                type: 'separator',
+                contexts: ['selection'],
+                parentId: 'customSearchParent'
+              });
+            }
+            uncategorizedUrls.forEach(urlItem => addUrlMenu(urlItem, 'customSearchParent'));
+            sectionsRendered++;
+          },
+          categories: () => {
+            if (usedCategories.length === 0) return;
+            if (sectionsRendered > 0) {
+              chrome.contextMenus.create({
+                id: 'separator-categories',
+                type: 'separator',
+                contexts: ['selection'],
+                parentId: 'customSearchParent'
+              });
+            }
+            usedCategories.forEach(cat => {
+              const icon = cat.icon || '📁';
+              chrome.contextMenus.create({
+                id: categoryMap[cat.id],
+                title: `${icon} ${cat.name}`,
+                contexts: ['selection'],
+                parentId: 'customSearchParent'
+              });
+              nonPresetUrls.filter(u => u.category === cat.id)
+                  .forEach(urlItem => {
+                    const suffix = favSet.has(urlItem.id) ? '_cat' : '';
+                    addUrlMenu(urlItem, categoryMap[cat.id], suffix);
+                  });
             });
+            sectionsRendered++;
+          }
+        };
+
+        contextMenuOrder.forEach(sectionKey => {
+          if (renderSection[sectionKey]) renderSection[sectionKey]();
         });
       }
 
-      // 4. Separator before management options
+      // Management options (always at the bottom)
       if (urls && urls.length > 0) {
         chrome.contextMenus.create({
           id: 'separator',
@@ -157,13 +264,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'addCurrentUrl') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0] &&
-        !(tabs[0].url.startsWith('chrome-extension://') || tabs[0].url.startsWith('chrome://'))) {
+          !(tabs[0].url.startsWith('chrome-extension://') || tabs[0].url.startsWith('chrome://'))) {
         const tabUrl = tabs[0].url;
         const tabTitle = tabs[0].title || 'New Search';
         chrome.tabs.create({
           url: chrome.runtime.getURL('options.html') +
-            '?prefillName=' + encodeURIComponent(tabTitle) +
-            '&prefillUrl=' + encodeURIComponent(tabUrl)
+              '?prefillName=' + encodeURIComponent(tabTitle) +
+              '&prefillUrl=' + encodeURIComponent(tabUrl)
         });
       }
     });
@@ -172,7 +279,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
   if (info.menuItemId.startsWith('parent_')) return; // Ignore clicks on parent menu items
 
-  const cleanedId = info.menuItemId.replace(/_cat$/, '');
+  const cleanedId = info.menuItemId.replace(/_(cat|preset)$/, '');
   const [urlId, envId] = cleanedId.split('|');
   if (!urlId) return;
 
@@ -190,7 +297,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Listen for changes in storage to update menu items
 chrome.storage.onChanged.addListener((changes, namespace) => {
-  if (namespace === 'sync' && (changes.urls || changes.variables || changes.environments || changes.categories || changes.favorites)) {
+  if (namespace === 'sync' && (changes.urls || changes.variables || changes.environments || changes.categories || changes.favorites || changes.settings)) {
     loadMenuItems();
   }
 });
