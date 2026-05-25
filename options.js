@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadUrls(filter) {
-    chrome.storage.sync.get({ urls: [], categories: [], favorites: [] }, (data) => {
+    chrome.storage.sync.get({ urls: [], categories: [], favorites: [], keyboardShortcuts: [] }, (data) => {
       urlList.innerHTML = '';
       if (bulkMode) urlList.classList.add('bulk-mode'); else urlList.classList.remove('bulk-mode');
       const searchTerm = (filter !== undefined ? filter : (urlSearchInput.value || '')).trim().toLowerCase();
@@ -276,6 +276,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<span class="category-badge">${catName}</span>`
                 : '';
             const isChecked = bulkSelectedIds.has(item.id);
+            const shortcutEntry = (data.keyboardShortcuts || []).find(s => s.urlId === item.id);
+            const hasShortcut = !!shortcutEntry;
+            const shortcutBadge = hasShortcut ? '<span class="shortcut-badge-inline"></span>' : '';
+            const shortcutTitle = hasShortcut
+                ? `Shortcut: ${shortcutEntry.shortcut} (click to change)`
+                : 'Assign keyboard shortcut';
             div.innerHTML = `
               <div class="bulk-checkbox${isChecked ? ' checked' : ''}" data-id="${item.id}"></div>
               <div class="drag-handle" title="Drag to reorder">${DRAG_HANDLE_SVG}</div>
@@ -285,7 +291,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="list-item-detail" title="${item.url}">${item.url}</div>
               </div>
               ${catBadge}
-              <div class="list-item-actions">
+              <div class="list-item-actions" style="position:relative">
+                <button class="btn btn-ghost btn-shortcut-url" data-id="${item.id}" title="${shortcutTitle}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M7 16h10"/></svg>
+                  ${shortcutBadge}
+                </button>
+                <div class="shortcut-inline-recorder" data-id="${item.id}">
+                  <span class="shortcut-inline-text">Press keys...</span>
+                  <span class="shortcut-cancel-btn" title="Cancel">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </span>
+                </div>
                 <button class="btn btn-ghost btn-fav-url${isFav ? ' btn-fav-active' : ''}" data-id="${item.id}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
                   <svg viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 </button>
@@ -1166,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Data Management ---
   exportBtn.addEventListener('click', () => {
-    chrome.storage.sync.get({ urls: [], variables: [], environments: [], categories: [], trash: [], favorites: [], settings: {} }, (data) => {
+    chrome.storage.sync.get({ urls: [], variables: [], environments: [], categories: [], trash: [], favorites: [], settings: {}, keyboardShortcuts: [] }, (data) => {
       const exportData = {
         urls: data.urls,
         variables: data.variables,
@@ -1174,7 +1190,8 @@ document.addEventListener('DOMContentLoaded', () => {
         categories: data.categories,
         trash: data.trash,
         favorites: data.favorites,
-        settings: data.settings
+        settings: data.settings,
+        keyboardShortcuts: data.keyboardShortcuts
       };
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -1201,12 +1218,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const trash = importedData.trash || [];
         const favorites = importedData.favorites || [];
         const settings = importedData.settings || {};
+        const keyboardShortcuts = importedData.keyboardShortcuts || [];
 
         if (!Array.isArray(urls) || !Array.isArray(variables) || !Array.isArray(environments)) {
           throw new Error('Invalid data structure.');
         }
 
-        chrome.storage.sync.set({ urls, variables, environments, categories, trash, favorites, settings }, () => {
+        chrome.storage.sync.set({ urls, variables, environments, categories, trash, favorites, settings, keyboardShortcuts }, () => {
           if (chrome.runtime.lastError) {
             showToast('Error: ' + chrome.runtime.lastError.message);
           } else {
@@ -1217,6 +1235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadCategories();
             loadTrash();
             loadSettings();
+            if (typeof loadShortcuts === 'function') loadShortcuts();
           }
         });
       } catch (error) {
@@ -1862,4 +1881,248 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!data.settings.tutorialSeen) showTutorial();
     });
   }
+
+  // --- Keyboard Shortcuts Management (inline on URL list items) ---
+  const shortcutList = document.getElementById('shortcut-list');
+  const shortcutEmpty = document.getElementById('shortcut-empty');
+  let activeRecorderUrlId = null;
+
+  /**
+   * Renders a shortcut string as styled key badges.
+   * @param {string} shortcutStr - e.g. "Ctrl+Shift+G"
+   * @returns {string} HTML
+   */
+  function renderShortcutKeys(shortcutStr) {
+    if (!shortcutStr) return '';
+    const keys = shortcutStr.split('+');
+    return '<span class="shortcut-display">' +
+        keys.map((k, i) => {
+          const badge = `<span class="shortcut-key">${k}</span>`;
+          return i < keys.length - 1 ? badge + '<span class="shortcut-plus">+</span>' : badge;
+        }).join('') +
+        '</span>';
+  }
+
+  /**
+   * Converts a KeyboardEvent to a shortcut string (same logic as content_script).
+   * @param {KeyboardEvent} e
+   * @returns {string}
+   */
+  function eventToShortcutStr(e) {
+    const parts = [];
+    if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
+    if (e.altKey) parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+    const key = e.key;
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) return '';
+    const normalizedKey = key.length === 1 ? key.toUpperCase() : key;
+    parts.push(normalizedKey);
+    return parts.join('+');
+  }
+
+  /** Closes any open inline recorder. */
+  function closeInlineRecorder() {
+    const activeEl = document.querySelector('.shortcut-inline-recorder.active');
+    if (activeEl) activeEl.classList.remove('active');
+    activeRecorderUrlId = null;
+  }
+
+  /** Opens the inline recorder for a given URL id. */
+  function openInlineRecorder(urlId) {
+    closeInlineRecorder();
+    const recorder = document.querySelector(`.shortcut-inline-recorder[data-id="${urlId}"]`);
+    if (recorder) {
+      recorder.classList.add('active');
+      const textEl = recorder.querySelector('.shortcut-inline-text');
+      // Show existing shortcut if one is assigned, otherwise prompt
+      chrome.storage.sync.get({ keyboardShortcuts: [] }, (data) => {
+        const existing = (data.keyboardShortcuts || []).find(s => s.urlId === urlId);
+        if (existing) {
+          textEl.innerHTML = renderShortcutKeys(existing.shortcut) + ' <span style="font-size:10px;color:var(--text-muted);margin-left:4px">(press new keys or Del to remove)</span>';
+        } else {
+          textEl.textContent = 'Press keys...';
+        }
+      });
+      activeRecorderUrlId = urlId;
+    }
+  }
+
+  // Click shortcut button on a URL list item → open inline recorder
+  urlList.addEventListener('click', (e) => {
+    const shortcutBtn = e.target.closest('.btn-shortcut-url');
+    if (!shortcutBtn) return;
+    e.stopPropagation();
+    const urlId = shortcutBtn.dataset.id;
+    if (activeRecorderUrlId === urlId) {
+      closeInlineRecorder();
+    } else {
+      openInlineRecorder(urlId);
+    }
+  });
+
+  // Cancel button inside inline recorder
+  urlList.addEventListener('click', (e) => {
+    const cancelBtn = e.target.closest('.shortcut-cancel-btn');
+    if (cancelBtn) {
+      e.stopPropagation();
+      closeInlineRecorder();
+    }
+  });
+
+  /**
+   * Updates the inline recorder text with the current modifier/key state.
+   * @param {HTMLElement} textEl - The .shortcut-inline-text element.
+   * @param {KeyboardEvent} e - The keyboard event.
+   * @param {boolean} isComplete - Whether a non-modifier key was also pressed.
+   */
+  function updateRecorderDisplay(textEl, e, isComplete) {
+    const parts = [];
+    if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
+    if (e.altKey) parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+    if (parts.length === 0 && !isComplete) {
+      textEl.textContent = 'Press keys...';
+      return;
+    }
+    if (!isComplete) {
+      // Show modifiers being held with trailing "+"
+      textEl.innerHTML = renderShortcutKeys(parts.join('+')) + ' <span class="shortcut-plus">+</span> <span style="font-size:10px;color:var(--text-muted)">...</span>';
+    } else {
+      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+      parts.push(key);
+      textEl.innerHTML = renderShortcutKeys(parts.join('+'));
+    }
+  }
+
+  // Listen for keydown when an inline recorder is active
+  document.addEventListener('keydown', (e) => {
+    if (!activeRecorderUrlId) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const activeRecorder = document.querySelector('.shortcut-inline-recorder.active');
+    const textEl = activeRecorder ? activeRecorder.querySelector('.shortcut-inline-text') : null;
+
+    if (e.key === 'Escape') {
+      closeInlineRecorder();
+      return;
+    }
+
+    // If Backspace/Delete, remove existing shortcut for this URL
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      chrome.storage.sync.get({ keyboardShortcuts: [] }, (data) => {
+        const shortcuts = (data.keyboardShortcuts || []).filter(s => s.urlId !== activeRecorderUrlId);
+        chrome.storage.sync.set({ keyboardShortcuts: shortcuts }, () => {
+          closeInlineRecorder();
+          loadUrls();
+          loadShortcuts();
+          showToast('Shortcut removed');
+        });
+      });
+      return;
+    }
+
+    const shortcutStr = eventToShortcutStr(e);
+
+    // If only modifier keys are held, show them live
+    if (!shortcutStr) {
+      if (textEl) updateRecorderDisplay(textEl, e, false);
+      return;
+    }
+
+    const hasModifier = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+    if (!hasModifier) {
+      showToast('Shortcut must include Ctrl, Alt, or Shift');
+      return;
+    }
+
+    // Show the complete combo visually
+    if (textEl) updateRecorderDisplay(textEl, e, true);
+
+    // Brief delay so the user can see the recorded combo before saving
+    const urlId = activeRecorderUrlId;
+    setTimeout(() => {
+      chrome.storage.sync.get({ keyboardShortcuts: [] }, (data) => {
+        let shortcuts = data.keyboardShortcuts || [];
+
+        // Check for conflicts with other URLs
+        const conflict = shortcuts.find(s => s.shortcut === shortcutStr && s.urlId !== urlId);
+        if (conflict) {
+          showToast('This shortcut is already assigned to another URL');
+          return;
+        }
+
+        // Remove existing shortcut for this URL, then add new one
+        shortcuts = shortcuts.filter(s => s.urlId !== urlId);
+        shortcuts.push({ urlId, shortcut: shortcutStr });
+
+        chrome.storage.sync.set({ keyboardShortcuts: shortcuts }, () => {
+          closeInlineRecorder();
+          loadUrls();
+          loadShortcuts();
+          showToast('Shortcut assigned: ' + shortcutStr);
+        });
+      });
+    }, 400);
+  }, true);
+
+  // Close inline recorder when clicking outside
+  document.addEventListener('click', (e) => {
+    if (activeRecorderUrlId && !e.target.closest('.shortcut-inline-recorder') && !e.target.closest('.btn-shortcut-url')) {
+      closeInlineRecorder();
+    }
+  });
+
+  /** Loads the assigned shortcuts list in the Settings tab. */
+  function loadShortcuts() {
+    chrome.storage.sync.get({ keyboardShortcuts: [], urls: [] }, (data) => {
+      const shortcuts = data.keyboardShortcuts || [];
+      shortcutList.innerHTML = '';
+
+      if (shortcuts.length === 0) {
+        shortcutEmpty.classList.remove('hidden');
+      } else {
+        shortcutEmpty.classList.add('hidden');
+
+        shortcuts.forEach(s => {
+          const urlItem = data.urls.find(u => u.id === s.urlId);
+          const urlName = urlItem ? urlItem.name : '(Deleted URL)';
+          const urlDetail = urlItem ? urlItem.url : '';
+
+          const div = document.createElement('div');
+          div.className = 'shortcut-list-item';
+          div.innerHTML = `
+            <div class="list-item-icon" style="background:${urlItem ? getIconColor(urlName) : '#94a3b8'}">${urlItem ? getInitials(urlName) : '??'}</div>
+            <span class="shortcut-url-name" title="${urlDetail}">${urlName}</span>
+            <span class="shortcut-binding">${renderShortcutKeys(s.shortcut)}</span>
+            <div class="list-item-actions" style="opacity:1">
+              <button class="btn btn-danger btn-remove-shortcut" data-url-id="${s.urlId}" title="Remove shortcut">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </button>
+            </div>
+          `;
+          shortcutList.appendChild(div);
+        });
+      }
+    });
+  }
+
+  // Remove shortcut from Settings list
+  shortcutList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-remove-shortcut');
+    if (!btn) return;
+    const urlId = btn.dataset.urlId;
+
+    chrome.storage.sync.get({ keyboardShortcuts: [] }, (data) => {
+      const shortcuts = (data.keyboardShortcuts || []).filter(s => s.urlId !== urlId);
+      chrome.storage.sync.set({ keyboardShortcuts: shortcuts }, () => {
+        loadShortcuts();
+        loadUrls();
+        showToast('Shortcut removed');
+      });
+    });
+  });
+
+  loadShortcuts();
 });

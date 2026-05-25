@@ -301,3 +301,110 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     loadMenuItems();
   }
 });
+
+// --- Keyboard Shortcut Handler ---
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type !== 'KEYBOARD_SHORTCUT_SEARCH') return;
+
+  const { urlId, selectedText } = message;
+  chrome.storage.sync.get({ urls: [], variables: [], environments: [], settings: {} }, (data) => {
+    const urlItem = data.urls.find(item => item.id === urlId);
+    if (!urlItem) return;
+
+    // For keyboard shortcuts, use the default variable values (no environment)
+    const resolvedUrl = substituteEnvVars(urlItem.url, 'NO_ENV', data.variables, data.environments);
+    const finalUrl = resolvedUrl.replace('%s', encodeURIComponent(selectedText));
+
+    const tabOpts = { url: finalUrl };
+    if (sender.tab && (data.settings.tabPosition || 'next') === 'next') {
+      tabOpts.index = sender.tab.index + 1;
+    }
+    chrome.tabs.create(tabOpts);
+  });
+});
+
+// --- Omnibox Handler (keyword: cs) ---
+chrome.omnibox.onInputStarted.addListener(() => {
+  chrome.omnibox.setDefaultSuggestion({
+    description: 'Custom Search: Type a search shortcut name followed by your query (e.g., "google hello world")'
+  });
+});
+
+chrome.omnibox.onInputChanged.addListener((text, suggest) => {
+  chrome.storage.sync.get({ urls: [] }, (data) => {
+    const input = text.trim().toLowerCase();
+    if (!input) return suggest([]);
+
+    const parts = input.split(/\s+/);
+    const prefix = parts[0];
+
+    // Suggest URLs whose name starts with the first word
+    const suggestions = data.urls
+        .filter(u => u.name.toLowerCase().startsWith(prefix) || u.name.toLowerCase().includes(prefix))
+        .slice(0, 8)
+        .map(u => {
+          const query = parts.slice(1).join(' ') || '...';
+          const escapedName = u.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const escapedQuery = query.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return {
+            content: u.name + ' ' + (parts.slice(1).join(' ') || ''),
+            description: `Search <match>${escapedName}</match> for <dim>"${escapedQuery}"</dim>`
+          };
+        });
+    suggest(suggestions);
+  });
+});
+
+chrome.omnibox.onInputEntered.addListener((text, disposition) => {
+  chrome.storage.sync.get({ urls: [], variables: [], environments: [], settings: {} }, (data) => {
+    const input = text.trim();
+    if (!input) return;
+
+    const parts = input.split(/\s+/);
+    const shortcutName = parts[0].toLowerCase();
+    const query = parts.slice(1).join(' ');
+
+    // Try exact name match first (case-insensitive), then prefix, then contains
+    let urlItem = data.urls.find(u => u.name.toLowerCase() === shortcutName);
+    if (!urlItem) urlItem = data.urls.find(u => u.name.toLowerCase().startsWith(shortcutName));
+    if (!urlItem) urlItem = data.urls.find(u => u.name.toLowerCase().includes(shortcutName));
+
+    // If still no match but we have a query, use it as the full search text with the first URL
+    if (!urlItem && data.urls.length > 0) {
+      // Treat entire input as query, use first URL (Google or first available)
+      urlItem = data.urls.find(u => u.name.toLowerCase().includes('google')) || data.urls[0];
+      const resolvedUrl = substituteEnvVars(urlItem.url, 'NO_ENV', data.variables, data.environments);
+      const finalUrl = resolvedUrl.replace('%s', encodeURIComponent(input));
+      openOmniboxResult(finalUrl, disposition);
+      return;
+    }
+
+    if (urlItem) {
+      const searchText = query || '';
+      const resolvedUrl = substituteEnvVars(urlItem.url, 'NO_ENV', data.variables, data.environments);
+      const finalUrl = resolvedUrl.replace('%s', encodeURIComponent(searchText));
+      openOmniboxResult(finalUrl, disposition);
+    }
+  });
+});
+
+/**
+ * Opens a URL based on the omnibox disposition.
+ * @param {string} url - The URL to open.
+ * @param {string} disposition - "currentTab", "newForegroundTab", or "newBackgroundTab".
+ */
+function openOmniboxResult(url, disposition) {
+  switch (disposition) {
+    case 'currentTab':
+      chrome.tabs.update({ url });
+      break;
+    case 'newForegroundTab':
+      chrome.tabs.create({ url });
+      break;
+    case 'newBackgroundTab':
+      chrome.tabs.create({ url, active: false });
+      break;
+    default:
+      chrome.tabs.update({ url });
+  }
+}

@@ -102,7 +102,7 @@
     }
 
     .top-bar-inner {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
       display: flex;
       align-items: center;
@@ -133,7 +133,7 @@
     }
 
     .tab-bar-inner {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
       display: flex;
       gap: 0;
@@ -182,7 +182,7 @@
 
     /* --- Main Content --- */
     .main-content {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 24px 32px;
     }
@@ -932,6 +932,147 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+    }
+
+    /* --- Keyboard Shortcuts --- */
+    @keyframes shortcutPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2); }
+      50% { box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+    }
+
+    .shortcut-key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text);
+      min-width: 24px;
+      text-align: center;
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .shortcut-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .shortcut-plus {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .shortcut-inline-recorder {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--surface);
+      border: 2px solid var(--primary);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--primary);
+      white-space: nowrap;
+      animation: shortcutPulse 1.5s ease infinite;
+    }
+
+    .shortcut-inline-recorder.active {
+      display: inline-flex;
+    }
+
+    .shortcut-inline-recorder .shortcut-cancel-btn {
+      cursor: pointer;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      color: var(--text-muted);
+      transition: color 0.1s;
+    }
+
+    .shortcut-inline-recorder .shortcut-cancel-btn:hover {
+      color: var(--danger);
+    }
+
+    .btn-shortcut-url {
+      position: relative;
+    }
+
+    .btn-shortcut-url .shortcut-badge-inline {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      border: 2px solid var(--surface);
+    }
+
+    .shortcut-list-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-light);
+      transition: background 0.1s;
+    }
+
+    .shortcut-list-item:last-child { border-bottom: none; }
+    .shortcut-list-item:hover { background: var(--surface-alt); }
+
+    .shortcut-list-item .shortcut-url-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .shortcut-list-item .shortcut-binding {
+      flex-shrink: 0;
+    }
+
+    .omnibox-demo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    .omnibox-demo .omnibox-keyword {
+      padding: 3px 8px;
+      background: var(--primary);
+      color: white;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .omnibox-demo .omnibox-text {
+      color: var(--text);
     }
 
     /* --- Utility --- */
@@ -2009,6 +2150,50 @@
         <h3>Right-Click Menu Order</h3>
         <p>Drag to reorder how sections appear in the right-click context menu.</p>
         <div id="context-menu-order" class="context-menu-order-list"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <h2>Assigned Keyboard Shortcuts</h2>
+      </div>
+      <div class="card-body">
+        <div class="info-tip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>Keyboard shortcuts assigned to your search URLs. <strong>Select text</strong> on any page, then press the shortcut to instantly search. Manage shortcuts from the Search URLs tab using the <svg style="display:inline;vertical-align:middle;width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M7 16h10"/></svg> button.</span>
+        </div>
+      </div>
+      <div id="shortcut-list"></div>
+      <div id="shortcut-empty" class="empty-list hidden">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M7 16h10"/></svg>
+        <p>No keyboard shortcuts assigned yet. Use the keyboard icon on each Search URL to assign one.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <h2>Omnibox Search</h2>
+      </div>
+      <div class="card-body">
+        <div class="info-tip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>Type <code>cs</code> in the Chrome address bar, press <code>Tab</code>, then type the name of a search shortcut followed by your query. The extension will search using the matched shortcut.</span>
+        </div>
+        <div class="omnibox-demo">
+          <span class="omnibox-keyword">cs</span>
+          <span class="omnibox-text">google hello world</span>
+          <span style="color:var(--text-muted);margin-left:auto;font-size:11px;">→ Searches Google for "hello world"</span>
+        </div>
+        <div class="omnibox-demo" style="margin-top:6px">
+          <span class="omnibox-keyword">cs</span>
+          <span class="omnibox-text">github react hooks</span>
+          <span style="color:var(--text-muted);margin-left:auto;font-size:11px;">→ Searches GitHub for "react hooks"</span>
+        </div>
+        <div class="omnibox-demo" style="margin-top:6px">
+          <span class="omnibox-keyword">cs</span>
+          <span class="omnibox-text">stackoverflow promise chaining</span>
+          <span style="color:var(--text-muted);margin-left:auto;font-size:11px;">→ Searches Stack Overflow for "promise chaining"</span>
+        </div>
       </div>
     </div>
   </div>
