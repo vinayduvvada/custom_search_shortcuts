@@ -29,6 +29,22 @@ A Chrome extension that adds customizable search shortcuts to your right-click c
 - **Category Preservation**: Favorited URLs still appear inside their category submenus in addition to being pinned at the top
 - **Toggle from Options**: Star/unstar shortcuts directly from the options page URL list
 
+### Keyboard Shortcuts
+- **Custom Hotkeys**: Assign a keyboard shortcut to any search URL directly from the Search URLs page using the ⌨ keyboard icon
+- **Inline Recorder**: Click the keyboard icon on a URL → press your desired key combination (e.g., `Ctrl+Shift+G`) → shortcut is saved instantly
+- **Live Key Feedback**: Modifier keys are shown in real-time as you hold them; the full combo is displayed before saving
+- **Modifier Required**: Shortcuts must include at least one modifier key (`Ctrl`, `Alt`, or `Shift`)
+- **Quick Remove**: Press `Backspace` or `Delete` while recording to remove an existing shortcut
+- **Visual Indicator**: A purple dot badge appears on the keyboard icon for URLs that have a shortcut assigned
+- **Settings Overview**: View and manage all assigned shortcuts from the Settings tab under "Assigned Keyboard Shortcuts"
+
+### Omnibox Search
+- **Address Bar Integration**: Type `cs` in Chrome's address bar, press `Tab`, then type a shortcut name followed by your query
+- **Auto-Suggestions**: Matching search URLs appear as suggestions as you type
+- **Smart Matching**: Matches shortcut names by exact match, prefix, or contains — in that priority order
+- **Fallback Search**: If no shortcut name matches, the entire input is used as a search query with the first available URL
+- **Example**: `cs google hello world` → searches Google for "hello world"
+
 ### Productivity
 - **Duplicate Shortcuts**: Clone an existing shortcut — pre-fills the form with the URL data for review before saving
 - **Popup Quick Access**: Search and launch shortcuts directly from the popup with category group headers
@@ -51,7 +67,7 @@ A Chrome extension that adds customizable search shortcuts to your right-click c
 
 1. Download or clone this repository:
    ```bash
-   git clone https://github.com/yourusername/custom-search-shortcuts.git
+   git clone https://github.com/vinayduvvada/custom_search_shortcuts.git
    ```
 
 2. Open Chrome and navigate to `chrome://extensions/`
@@ -152,12 +168,13 @@ Perfect for developers who need to search across different environments (dev, st
 
 ```
 custom-search-shortcuts/
-├── manifest.json          # Extension configuration
-├── background.js          # Service worker (context menu logic)
+├── manifest.json          # Extension configuration (permissions, omnibox keyword, content scripts)
+├── background.js          # Service worker (context menu, keyboard shortcut handler, omnibox handler)
+├── content_script.js      # Content script (listens for keyboard shortcuts on all pages)
 ├── popup.html            # Extension popup UI
 ├── popup.js              # Popup functionality + theme cycle
 ├── options.html          # Options page UI (tabs: URLs, Variables, Categories, Environments, Trash, Settings)
-├── options.js            # Options page logic (CRUD, drag-reorder, settings, trash)
+├── options.js            # Options page logic (CRUD, drag-reorder, settings, trash, inline shortcut recorder)
 ├── theme.js              # Shared theme manager (light/dark/system)
 ├── icons/                # Extension icons
 │   ├── icon16.png
@@ -171,6 +188,7 @@ custom-search-shortcuts/
 
 - **manifest.json**: Extension metadata and permissions
 - **background.js**: Handles context menu creation, category submenus, separators, environment submenus, and click events (respects tab position setting)
+- **content_script.js**: Injected on all pages — listens for user-defined keyboard shortcuts, captures selected text, and messages the background service worker
 - **options.js**: Manages URLs, variables, environments, categories, trash, and settings — includes drag-and-drop reordering, emoji picker, and undo-able delete
 - **popup.js**: Popup with category-grouped shortcut list, search filter, theme cycle button
 - **theme.js**: Shared theme engine — reads/writes `theme` setting, applies `data-theme` attribute, listens for `prefers-color-scheme` changes and cross-page sync
@@ -181,6 +199,7 @@ custom-search-shortcuts/
 - `storage`: Save user configurations (synced across devices via `chrome.storage.sync`)
 - `activeTab`: Access current tab info for "Add Current Page" and tab positioning
 - `tabs`: Query tab index for opening shortcuts next to the current tab
+- `scripting`: Required for content script injection (keyboard shortcuts on pages)
 
 ### Building & Testing
 
@@ -290,7 +309,13 @@ Prod:    https://yourdomain.com/
     "trashDays": 15,
     "tabPosition": "next",
     "defaultCategory": ""
-  }
+  },
+   "keyboardShortcuts": [
+      {
+         "urlId": "custom-search-1234567890",
+         "shortcut": "Ctrl+Shift+G"
+      }
+   ]
 }
 ```
 
@@ -375,7 +400,7 @@ If you distribute this extension, you are responsible for ensuring compliance wi
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/dvinay/custom-search-shortcuts/issues)
+- **Issues**: [GitHub Issues](https://github.com/vinayduvvada/custom-search-shortcuts/issues)
 - **Email**: vinay.chowdary518@gmail.com
 - **Documentation**: [Chrome Extension Docs](https://developer.chrome.com/docs/extensions/)
 
@@ -393,20 +418,34 @@ The Settings tab (gear icon, rightmost tab) provides centralized configuration:
 
 ## 📊 Version History
 
-### v3.0.0
+
+### v5.0.0
+- **Keyboard Shortcuts**: Assign custom hotkeys to any search URL — select text on any page and press the shortcut to instantly search
+- Inline shortcut recorder on each URL list item with live modifier key feedback
+- Purple dot badge indicator for URLs with assigned shortcuts
+- Assigned Shortcuts overview in the Settings tab
+- **Omnibox Search**: Type `cs` + `Tab` in the address bar to search using any shortcut (e.g., `cs google hello world`)
+- Auto-suggestions as you type in the omnibox
+- Smart name matching (exact → prefix → contains)
+- New content script (`content_script.js`) for capturing keyboard shortcuts on all pages
+- Export/Import now includes keyboard shortcuts
+
+### v4.0.0
 - **Favorites**: Pin shortcuts to the top of the context menu and popup for quick access
 - Favorite star toggle in both popup and options page
 - Favorited URLs appear at the top of the context menu with a separator
 - Favorited URLs with categories still appear inside their category submenus
 - Export/Import now includes favorites and settings
 
-### v2.0.0
+### v3.0.0
 - Search Categories with emoji icon picker
 - Nested category submenus in context menu with separators
 - Duplicate shortcut (pre-fills form for review)
 - Trash system with configurable retention and undo-able delete
 - Dark mode / Light mode / System theme toggle
-- Settings page (theme, trash retention, tab position, default category)
+
+### v2.0.0
+- Settings page (theme, tab position, default category)
 - New tabs open next to current tab (configurable)
 - Popup grouped by category with emoji headers
 - Drag-and-drop reordering for URLs, categories, and environments
